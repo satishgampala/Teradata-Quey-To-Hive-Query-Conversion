@@ -1,1 +1,1 @@
-## This is a sample project.
+## This project will convert the Teradata queries to Hive Queries.
