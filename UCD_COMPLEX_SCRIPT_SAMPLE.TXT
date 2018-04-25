@@ -1,0 +1,2005 @@
+--############################################################################################
+--# Name
+--#Author 
+--#Date   
+--#Comments 
+--#
+--#
+--############################################################################################
+
+--comment line
+--comment line2
+-- comment line3
+CREATE VOLATILE TABLE TEMPTABLE1 AS(
+        SELECT
+                                COALESCE(TRIM(PDCT.ALT_PDCT_GROUP_CDE),TRIM(PDCT.PDCTUCT_GROUP),'XXXXX') AS RPT_PDCTUCT_GROUP,
+                                PDCT.PDCTID,
+                                ACTUAL_LED_BAL,
+                                ACT_LED_BAL_LOC,
+                                PLN.INT_OUTSTAND,
+                                POST_REDINK_ACTUAL_LED_BAL,
+                                CASE
+                                   WHEN POST_REDINK_ACTUAL_LED_BAL IS NOT NULL THEN POST_REDINK_ACTUAL_LED_BAL
+                                   WHEN PLN.INT_OUTSTAND IS NOT NULL THEN ACTUAL_LED_BAL + PLN.INT_OUTSTAND
+                                   ELSE ACTUAL_LED_BAL
+                                END AS GL_BAL,
+
+                                CASE
+                                        WHEN POST_REDINK_ACTUAL_LED_BAL IS NOT NULL THEN POST_REDINK_ACTUAL_LED_BAL
+                                        WHEN PLN.INT_OUTSTAND IS NOT NULL THEN ACT_LED_BAL_LOC  +  PLN.INT_OUTSTAND
+                                        ELSE ACT_LED_BAL_LOC
+                                END AS GL_BAL_LOC,
+                                CASE WHEN GL_BAL_LOC<  0 THEN COALESCE(ABS(GL_BAL_LOC),0) ELSE 0 END AS DEB_ACT_LED_BAL_LOC,
+                                CASE WHEN ACBD.REFERENCE_DATA IS NOT NULL THEN 'Y' ELSE ' ' END AS FD_SMT_MTG_IND,
+                                                                ---Revolving Credit Line identification
+                                                                CASE WHEN ACBD_REV.REFERENCE_DATA IS NOT NULL THEN 'Y' ELSE ' ' END AS RVLR_CRDT_LN_IND
+                                FROM MAINTEMPTABLE1 PDCT
+                                LEFT JOIN MAINTABLE5 PCA ON PDCT.PDCTID = PCA.PDCTID
+                                LEFT JOIN  MAINTABLE6 AS PLN ON PDCT.PDCTID = PLN.PDCTID AND PDCT.SSSYS = PLN.SSSYS
+                                LEFT JOIN MAINTABLE7 ACBD ON PDCT.PDCTUCT_GROUP = ACBD.REFERENCE_KEY1 AND ACBD.REFERENCE_KEY2 ='RSMG_SUBSET1'
+                                                                ---Revolving Credit Line identification
+                                                                LEFT JOIN MAINTABLE7 ACBD_REV ON PDCT.PDCTUCT_GROUP = ACBD_REV.REFERENCE_KEY1 AND ACBD_REV.REFERENCE_KEY2 ='RSMG_SUBSET2'
+                                WHERE PDCT.SSSYS IN ('RPS','WHL')
+                                AND PDCT.gcdm_extract_mkr = 'R'
+                                -- AND SUBSTR(PDCT.GL_ACT_LED_BAL_KEY,1,1) <> '2'
+) WITH DATA UNIQUE PRIMARY INDEX(PDCTID) ON COMMIT PRESERVE ROWS;
+
+
+
+CREATE VOLATILE TABLE TEMPTABLE2 AS(
+SELECT
+        T1.PDCTID,
+        CASE
+                WHEN T1.ASSET_CLASS = 'QRRE' THEN  'SIF_DEF_CUST_QRRERet'
+                WHEN T1.ASSET_CLASS = 'OTHR' THEN  'SIF_DEF_CUST_OTHRRet'
+                WHEN T1.ASSET_CLASS = 'RSMG' THEN  'SIF_DEF_CUST_RSMGRet'
+                WHEN T1.ASSET_CLASS = 'UNKN' THEN  'SIF_DEF_CUST_UNKNSME'
+                WHEN T1.ASSET_CLASS = 'SMEO' THEN  'SIF_DEF_CUST_SMEOTHR'
+                ELSE 'SIF_DEF_CUST_UNKNSME'
+        END AS CustomerITentifier,
+        CAST(COALESCE(T1.PROBABILITY_DEFAULT_PCT,000.000) AS DECIMAL (6,3)) AS PD,
+        CASE
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3)) < SUBSTR(PD01.CNTLDAT,15,7)  THEN SUBSTR(PD01.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD02.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))  <= SUBSTR(PD02.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD02.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))  >= SUBSTR(PD03.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))  <= SUBSTR(PD03.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD03.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD04.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD04.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD04.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD05.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD05.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD05.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD06.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD06.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD06.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD07.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD07.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD07.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD08.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD08.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD08.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD09.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD09.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD09.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD10.CNTLDAT,7,7)  AND
+                                                        T1.PROBABILITY_DEFAULT_PCT  <= SUBSTR(PD10.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD10.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD11.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD11.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD11.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD12.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))  <= SUBSTR(PD12.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD12.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD13.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD13.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD13.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD14.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD14.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD14.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD15.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))  <= SUBSTR(PD15.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD15.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD16.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD16.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD16.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD17.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))  <= SUBSTR(PD17.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD17.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD18.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD18.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD18.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD19.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD19.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD19.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD20.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD20.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD20.CNTLDAT,23,7)
+
+                        WHEN CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   >= SUBSTR(PD21.CNTLDAT,7,7)  AND
+                                                        CAST(T1.PROBABILITY_DEFAULT_PCT AS DECIMAL(6,3))   <= SUBSTR(PD21.CNTLDAT,15,7)
+                                                        THEN SUBSTR(PD21.CNTLDAT,23,7)
+                                                ELSE '000.000'
+        END AS PDBAND
+
+        FROM MAINTABLE3 T1
+
+        INNER JOIN MAINTABLE4 PD01 ON PD01.CONTROL_KEY = 'PD_01'
+        INNER JOIN MAINTABLE4 PD02 ON PD02.CONTROL_KEY = 'PD_02'
+        INNER JOIN MAINTABLE4 PD03 ON PD03.CONTROL_KEY = 'PD_03'
+        INNER JOIN MAINTABLE4 PD04 ON PD04.CONTROL_KEY = 'PD_04'
+        INNER JOIN MAINTABLE4 PD05 ON PD05.CONTROL_KEY = 'PD_05'
+        INNER JOIN MAINTABLE4 PD06 ON PD06.CONTROL_KEY = 'PD_06'
+        INNER JOIN MAINTABLE4 PD07 ON PD07.CONTROL_KEY = 'PD_07'
+        INNER JOIN MAINTABLE4 PD08 ON PD08.CONTROL_KEY = 'PD_08'
+        INNER JOIN MAINTABLE4 PD09 ON PD09.CONTROL_KEY = 'PD_09'
+        INNER JOIN MAINTABLE4 PD10 ON PD10.CONTROL_KEY = 'PD_10'
+        INNER JOIN MAINTABLE4 PD11 ON PD11.CONTROL_KEY = 'PD_11'
+        INNER JOIN MAINTABLE4 PD12 ON PD12.CONTROL_KEY = 'PD_12'
+        INNER JOIN MAINTABLE4 PD13 ON PD13.CONTROL_KEY = 'PD_13'
+        INNER JOIN MAINTABLE4 PD14 ON PD14.CONTROL_KEY = 'PD_14'
+        INNER JOIN MAINTABLE4 PD15 ON PD15.CONTROL_KEY = 'PD_15'
+        INNER JOIN MAINTABLE4 PD16 ON PD16.CONTROL_KEY = 'PD_16'
+        INNER JOIN MAINTABLE4 PD17 ON PD17.CONTROL_KEY = 'PD_17'
+        INNER JOIN MAINTABLE4 PD18 ON PD18.CONTROL_KEY = 'PD_18'
+        INNER JOIN MAINTABLE4 PD19 ON PD19.CONTROL_KEY = 'PD_19'
+        INNER JOIN MAINTABLE4 PD20 ON PD20.CONTROL_KEY = 'PD_20'
+        INNER JOIN MAINTABLE4 PD21 ON PD21.CONTROL_KEY = 'PD_21'
+                --WHERE CustomerITentifier <> 'SIF_DEF_CUST_UNKNSME'
+/*WHERE T1.PROBABILITY_DEFAULT_PCT IS NOT NULL
+AND T1.LOSS_GIVEN_DEFAULT IS NOT NULL
+AND T1.EXPOSURE_DEFAULT IS NOT NULL*/
+) WITH DATA UNIQUE PRIMARY INDEX(PDCTID) ON COMMIT PRESERVE ROWS;
+
+
+--this does the defaut setting
+CREATE VOLATILE TABLE TEMPTABLE3 AS(
+                SELECT
+                T1.PDCTID,
+                T1.BASEL_2_APRC_COD,
+                                CASE
+                                        WHEN
+                                                        (T1.SSSYS = 'WHL' AND T1.PDCTUCT_GROUP = 'CMMCD')
+                                                        OR
+                                                        (T1.SSSYS = 'RPS' AND T1.CUSTOMER_GROUP = 'COM')
+                                        THEN ASSCLS6.CNTLDAT
+                                        ELSE T3.REFERENCE_DATA
+                                END AS ASSET_CLASS_LOCAL,
+
+                T1.PDCTUCT_GROUP,
+                --set the defaults 911 days or 30 months OR  RSMG 2190 days or  73 months
+
+                CASE
+                WHEN ASSET_CLASS_LOCAL = ASSCLS1.CNTLDAT
+                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 6)
+                WHEN ASSET_CLASS_LOCAL = ASSCLS3.CNTLDAT
+                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+                ELSE ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 30)
+                END AS PDCTMatDate,
+
+                CASE
+                WHEN ASSET_CLASS_LOCAL = ASSCLS1.CNTLDAT
+                THEN RESMAT1.CNTLDAT
+                WHEN ASSET_CLASS_LOCAL = ASSCLS3.CNTLDAT
+                THEN RESMAT3.CNTLDAT
+                ELSE RESMAT2.CNTLDAT
+                END AS ResMat,
+
+                'DEFAULT' AS UPDATE_SOURCE
+                FROM MAINTEMPTABLE1 T1
+                LEFT JOIN MAINTABLE3 T2 ON T1.PDCTID = T2.PDCTID
+
+                LEFT JOIN MAINTABLE5 T3 ON T1.PDCTUCT_GROUP = T3.REFERENCE_KEY1 AND T3.REFERENCE_KEY2 LIKE '%RETAIL%'
+
+                INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+                --QRRE
+                INNER JOIN MAINTABLE4 ASSCLS1 ON ASSCLS1.CONTROL_KEY = 'ASSET_CLASS1'
+                --OTHR
+                INNER JOIN MAINTABLE4 ASSCLS2 ON ASSCLS2.CONTROL_KEY = 'ASSET_CLASS2'
+                --RMSG
+                INNER JOIN MAINTABLE4 ASSCLS3 ON ASSCLS3.CONTROL_KEY = 'ASSET_CLASS3'
+                --RSME
+                INNER JOIN MAINTABLE4 ASSCLS4 ON ASSCLS4.CONTROL_KEY = 'ASSET_CLASS4'
+                --UNKN
+                INNER JOIN MAINTABLE4 ASSCLS5 ON ASSCLS5.CONTROL_KEY = 'ASSET_CLASS5'
+                --SMEO
+                INNER JOIN MAINTABLE4 ASSCLS6 ON ASSCLS6.CONTROL_KEY = 'ASSET_CLASS6'
+
+                INNER JOIN MAINTABLE4 RESMAT1 ON RESMAT1.CONTROL_KEY = 'MATURITY_RESULT1'
+                INNER JOIN MAINTABLE4 RESMAT2 ON RESMAT2.CONTROL_KEY = 'MATURITY_RESULT2'
+                INNER JOIN MAINTABLE4 RESMAT3 ON RESMAT3.CONTROL_KEY = 'MATURITY_RESULT3'
+
+                WHERE T1.GCDM_EXTRACT_MKR = 'R' AND T1.SSSYS IN ('RPS','WHL')
+--                AND T1.PDCTUCT_GROUP
+--                              IN (SELECT REFERENCE_KEY1 FROM MAINTABLE5 WHERE REFERENCE_KEY2 LIKE '%RETAIL%')
+) WITH DATA  UNIQUE PRIMARY INDEX(PDCTID) ON COMMIT PRESERVE ROWS;
+
+--does the PDCTMTG lookup
+UPDATE TEMPTABLE3
+FROM (
+                                SELECT
+                                T1.PDCTID,
+                                T2.MATURITY_DATE ,
+                                'PDCTMTG' AS UPDATE_SOURCE,
+                                CASE
+                                                WHEN CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 6)
+
+                                                WHEN CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+
+                                                WHEN CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                                AND
+                                                                                CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+                                END AS PDCTMatDate,
+
+                               CASE
+                                                WHEN CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                THEN RESMAT1.CNTLDAT
+
+                                                WHEN CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN RESMAT3.CNTLDAT
+
+                                                WHEN CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                                AND
+                                                                                CAST(T2.MATURITY_DATE AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN RESMAT3.CNTLDAT
+                                END AS ResMat
+
+                                FROM TEMPTABLE3 T1
+                                INNER JOIN INS_ABD_PDCTMTG T2 ON T1.PDCTID = T2.PDCTID
+                                INNER JOIN MAINTABLE4 ASSCLS3 ON ASSCLS3.CONTROL_KEY = 'ASSET_CLASS3'
+                                INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+                                                                INNER JOIN MAINTABLE4 RESMAT1 ON RESMAT1.CONTROL_KEY = 'MATURITY_RESULT1'
+                                                        INNER JOIN MAINTABLE4 RESMAT3 ON RESMAT3.CONTROL_KEY = 'MATURITY_RESULT3'
+                                WHERE T2.MATURITY_DATE IS NOT NULL
+                                ) AS T1
+SET UPDATE_SOURCE = T1.UPDATE_SOURCE
+,PDCTMatDate = T1.PDCTMatDate
+,ResMat = T1.ResMat
+WHERE TEMPTABLE3.PDCTID = T1.PDCTID;
+
+--does all the CURRACC lookups
+UPDATE TEMPTABLE3
+FROM (
+                                SELECT
+                                T1.PDCTID,
+                                T1.ASSET_CLASS_LOCAL,
+                                T2.REPAYMENT_DATE_FINAL ,
+                                'CURRACC' AS UPDATE_SOURCE,
+
+                                CASE
+                                                        WHEN T1.ASSET_CLASS_LOCAL = ASSCLS3.CNTLDAT THEN
+                                                                                CASE
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYY
+YMM') , 12)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 6)
+
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYY
+YMM') , 60)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YY
+YYMM') , 12)
+                                                                                                                        AND
+                                                                                                                        CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 30)
+                                                                                END
+
+                                                        WHEN T1.ASSET_CLASS_LOCAL = ASSCLS2.CNTLDAT THEN
+                                                                                CASE
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYY
+YMM') , 12)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 6)
+
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYY
+YMM') , 60)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YY
+YYMM') , 12)
+                                                                                                                        AND
+                                                                                                                        CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 30)
+                                                                                END
+
+
+                                                        WHEN T1.ASSET_CLASS_LOCAL = ASSCLS1.CNTLDAT THEN
+                                                                                CASE
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYY
+YMM') , 12)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 6)
+
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYY
+YMM') , 60)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+
+                                                                                        WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YY
+YYMM') , 12)
+                                                                                                                        AND
+                                                                                                                        CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                                                        THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+                                                                                END
+                                END AS PDCTMatDate,
+
+                                CASE
+                                                        WHEN T1.ASSET_CLASS_LOCAL = ASSCLS3.CNTLDAT THEN
+                                                                CASE
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+12)
+                                                                                                THEN RESMAT1.CNTLDAT
+
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+60)
+                                                                                                THEN RESMAT3.CNTLDAT
+
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+12)
+                                                                                                                AND
+                                                                                                                CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT
+AS DATE FORMAT 'YYYYMM') , 60)
+                                                                                                THEN RESMAT2.CNTLDAT
+                                                                END
+
+                                                        WHEN T1.ASSET_CLASS_LOCAL = ASSCLS2.CNTLDAT THEN
+                                                                CASE
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+12)
+                                                                                                THEN RESMAT1.CNTLDAT
+
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+60)
+                                                                                                THEN RESMAT3.CNTLDAT
+
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+12)
+                                                                                                                AND
+                                                                                                                CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT
+AS DATE FORMAT 'YYYYMM') , 60)
+                                                                                                THEN RESMAT2.CNTLDAT
+                                                                END
+
+                                                        WHEN T1.ASSET_CLASS_LOCAL = ASSCLS1.CNTLDAT THEN
+                                                                CASE
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+12)
+                                                                                                THEN RESMAT1.CNTLDAT
+
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+60)
+                                                                                                THEN RESMAT3.CNTLDAT
+
+                                                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') ,
+12)
+                                                                                                                AND
+                                                                                                                CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT
+AS DATE FORMAT 'YYYYMM') , 60)
+                                                                                                THEN RESMAT3.CNTLDAT
+                                                                END
+                                END AS ResMat
+
+                                FROM TEMPTABLE3 T1
+                                INNER JOIN MAINTABLE5  T2 ON T1.PDCTID = T2.PDCTID
+                                --Class 3 is  RSMG
+                                INNER JOIN MAINTABLE4 ASSCLS3 ON ASSCLS3.CONTROL_KEY = 'ASSET_CLASS3'
+                                --Class 2 is OTHR
+                                INNER JOIN MAINTABLE4 ASSCLS2 ON ASSCLS2.CONTROL_KEY = 'ASSET_CLASS2'
+                                --Class 1 is QRRE
+                                INNER JOIN MAINTABLE4 ASSCLS1 ON ASSCLS1.CONTROL_KEY = 'ASSET_CLASS1'
+                                INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+                                                                INNER JOIN MAINTABLE4 RESMAT1 ON RESMAT1.CONTROL_KEY = 'MATURITY_RESULT1'
+                                                        INNER JOIN MAINTABLE4 RESMAT2 ON RESMAT2.CONTROL_KEY = 'MATURITY_RESULT2'
+                                                        INNER JOIN MAINTABLE4 RESMAT3 ON RESMAT3.CONTROL_KEY = 'MATURITY_RESULT3'
+
+                                WHERE T2.REPAYMENT_DATE_FINAL IS NOT NULL
+                                                                AND (T1.PDCTMatDate IS NULL AND T1.ResMat IS NULL)
+                                ) AS T1
+SET UPDATE_SOURCE = T1.UPDATE_SOURCE
+,PDCTMatDate = T1.PDCTMatDate
+,ResMat = T1.ResMat
+WHERE TEMPTABLE3.PDCTID = T1.PDCTID;
+
+
+
+--does all the PLNSBL lookups
+UPDATE TEMPTABLE3
+FROM (
+                                SELECT
+                                T1.PDCTID,
+                                T1.ASSET_CLASS_LOCAL,
+                                T2.REPAYMENT_DATE_FINAL ,
+                                'PLNSBL' AS UPDATE_SOURCE,
+                                CASE
+                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 6)
+
+                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 73)
+
+                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                                AND
+                                                                                CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 30)
+                                END AS PDCTMatDate,
+
+                                CASE
+                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                THEN RESMAT1.CNTLDAT
+
+                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN RESMAT3.CNTLDAT
+
+                                                WHEN CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') >=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 12)
+                                                                                AND
+                                                                                CAST(T2.REPAYMENT_DATE_FINAL AS DATE FORMAT 'YYYYMM') <=  ADD_MONTHS(CAST(REPMONTH.CNTLDAT AS DATE FORMAT 'YYYYMM') , 60)
+                                                                THEN RESMAT2.CNTLDAT
+                                END AS ResMat
+                                FROM TEMPTABLE3 T1
+                                INNER JOIN MAINTABLE6 T2 ON T1.PDCTID = T2.PDCTID
+                                INNER JOIN MAINTABLE4 ASSCLS3 ON ASSCLS3.CONTROL_KEY = 'ASSET_CLASS3'
+                                INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+                                                                INNER JOIN MAINTABLE4 RESMAT1 ON RESMAT1.CONTROL_KEY = 'MATURITY_RESULT1'
+                                                        INNER JOIN MAINTABLE4 RESMAT2 ON RESMAT2.CONTROL_KEY = 'MATURITY_RESULT2'
+                                                        INNER JOIN MAINTABLE4 RESMAT3 ON RESMAT3.CONTROL_KEY = 'MATURITY_RESULT3'
+                                WHERE T2.REPAYMENT_DATE_FINAL IS NOT NULL
+                                ) AS T1
+SET UPDATE_SOURCE = T1.UPDATE_SOURCE
+,PDCTMatDate = T1.PDCTMatDate
+,ResMat = T1.ResMat
+WHERE TEMPTABLE3.PDCTID = T1.PDCTID;
+--Perform the main SIF consolidation process
+-- JG amended various definitions below to use pre calculated undrawn and debit balance figures now in TEMPTABLE1 table
+-- jg amended to correct logic and align with business rules
+
+-- START CRC0003 in relation to GRCA Population in SIF
+
+CREATE VOLATILE TABLE TEMPTABLE9 AS (
+SEL A.PDCTID,B.GRCA_CODE,GL_ACT_LED_BAL_KEY
+FROM
+MAINTEMPTABLE1  A
+INNER JOIN
+MAINTABLE15  B ON A.GL_ACT_LED_BAL_KEY = B.GL_ACCOUNT_8
+AND A.GL_ACT_LED_BAL_KEY  IS NOT NULL
+UNION ALL
+sel C.PDCTID,D.GRCA_CODE,GL_ACT_LED_BAL_KEY
+FROM
+(
+SEL A.PDCTID,B.ASSET_GL_ACCOUNT ,GL_ACT_LED_BAL_KEY
+FROM
+MAINTEMPTABLE1 A
+INNER JOIN INS_ABD_XRPS_GL_CATSMAP B
+ON
+A.PDCTUCT_GROUP =B.RPS_PDCT_GROUP and
+B.MAPPING_SET = (SEL CNTLDAT FROM MAINTABLE4 WHERE CONTROL_KEY = 'BASCATMAP')
+AND  A.GL_ACT_LED_BAL_KEY  IS  NULL ) C
+INNER JOIN MAINTABLE15  D ON C.ASSET_GL_ACCOUNT=D.GL_ACCOUNT_8 )
+        WITH DATA UNIQUE PRIMARY INDEX(PDCTID) ON COMMIT PRESERVE ROWS;
+-- END CRC0003 in relation to GRCA Population in SIF
+
+CREATE  VOLATILE TABLE TEMPTABLE4 AS(
+
+SELECT
+    RECTYP,
+    SITIDentifier,
+    ESR_SITCE,
+    Group_STEMIDentifier,
+    Loc_SSSYSIT,
+    Account_DealITentifier_OLD, -- Old PDCTID consolidated
+    RANK() OVER (PARTITION BY T1.Account_DealITentifier_NEW ORDER   BY T1.Account_DealITentifier_OLD, Customer_Group, CUSTOMER_SUBGRP1, CUSTOMER_SUBGRP2 ASC) AS PDCT_RANKING, --Sequence number to identify the PDCTID consolidated
+    TRIM(Account_DealITentifier_NEW)||CAST(CAST(PDCT_RANKING AS FORMAT'9(10)') AS CHAR(10))  AS Account_DealITentifier_NEW, -- New PDCTID consolidated
+    Organisation_UnitIT,
+    CustomerITentifier,
+    CustomerITentifier_Type,
+    Loc_PDCTuct_Type_Code,
+    Group_PDCTuct_Type_Code,
+    Basel_2_Approach,
+    Banking_Trading_Indicator,
+    Securitised_Indicator,
+    Customer_Group,
+    SUBSTR(Probability_of_Def ,1,3)||  SUBSTR(Probability_of_Def,5,3) || '0' AS Probability_of_Def,
+    PDCTuctMaturityDate,
+    CASE
+                WHEN EndofPrdBalLocRepCurr < 0
+                THEN EndofPrdBalLocRepCurr * -1
+                ELSE 0
+    END AS EndofPrdBalLocRepCurr,
+    EndofPrdBalLocRepCurr_Sign,
+    EndofPrdBalLocRecKey,
+    EndofPrdBalGroupRecKey,
+    BIS2AssetType,
+    Exposure_Subtype,
+    Exp_Type,
+    Past_Due_Indicator,
+    Regulatory_PDCTuct_Type,
+    Regulator,
+    Residual_Maturity,
+    WgtAvgLGDFactorLocRepCurr,
+    WgtAvgCrdConvFactorLocRepCurr,
+    CASE
+                WHEN    CrdMtgAdjLGDLocRepCurr  <= 0.99
+        THEN '000' || CAST(CrdMtgAdjLGDLocRepCurr  AS CHAR(4)) || '000000000000'
+        WHEN CrdMtgAdjLGDLocRepCurr  > 0.99 AND     CrdMtgAdjLGDLocRepCurr  <= 9.99
+                THEN '00' || CAST(CrdMtgAdjLGDLocRepCurr  AS CHAR(4)) || '0000000000000'
+        WHEN CrdMtgAdjLGDLocRepCurr > 9.99 AND     CrdMtgAdjLGDLocRepCurr <= 99.99
+        THEN '0' || CAST(CrdMtgAdjLGDLocRepCurr  AS CHAR(5)) || '0000000000000'
+        WHEN CrdMtgAdjLGDLocRepCurr > 99.99 AND     CrdMtgAdjLGDLocRepCurr <= 999.99
+THEN CAST(CrdMtgAdjLGDLocRepCurr  AS CHAR(5)) || '00000000000000'
+ELSE CAST(CrdMtgAdjLGDLocRepCurr  AS CHAR(6)) || '0000000000000'
+    END AS CrdMtgAdjLGDLocRepCurr_tmp,
+CASE
+WHEN CrdMtgAdjLGDLocRepCurr <= 999.99
+THEN SUBSTR(CrdMtgAdjLGDLocRepCurr_tmp,1,3) || SUBSTR(CrdMtgAdjLGDLocRepCurr_tmp,5,15)
+ELSE SUBSTR(CrdMtgAdjLGDLocRepCurr_tmp,1,4) || SUBSTR(CrdMtgAdjLGDLocRepCurr_tmp,6,15)
+END AS CrdMtgAdjLGDLocRepCurr,
+    Loss_Given_Def  ,
+    Risk_Weight     ,
+    CredMitAdjExpDefLocRepCurr      ,
+    CredMitAdjRskWgtAssLocRepCurr   ,
+    GrossExpDefLocRepCurr   ,
+    UndrawnGrossExpDefLocRepCurr    ,
+    DrawnGrossExpDefLocRepCurr      ,
+    ExpectedLossLocRepCurr  ,
+    CredMitAdjCapitalReqLocRepCurr  ,
+    InterCpyRiskWgtAssetLocRepCur   ,
+    CCF     ,
+    OriginalMaturity        ,
+    CUSTOMER_SUBGRP1        ,
+    CUSTOMER_SUBGRP2        ,
+    PreAggPDCTuctCount,
+    --## corep fields
+    CURR_LTV_PCT,
+    MTUR_EFF_DAY_CNT,
+    EOP_BAL_CCY_CODE,
+    EOP_BAL_AMT,
+    ACT_CCY_CDE,
+    EAD_GL_KEY,
+    EAD_GRCA_KEY,
+    EXPCT_LGD_AMT,
+    DRW_CRED_MTGT_ADJ_EAD_AMT,
+    UNDRW_CRED_MTGT_ADJ_EAD_AMT,
+    DRW_CRED_MTGT_ADJ_RWA_AMT,
+    UDRW_CRED_MTGT_ADJ_RWA_AMT,
+    ORIG_EXPSR_PRE_CV_FCTR_AMT,
+    DRW_ORIG_EXPS_PRE_CV_FCTR_AMT,
+    UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT,
+    BSL_NET_EAD_PRE_CCF_AMT,
+    DRW_CRED_MTGT_ADJ_EAD_AMT AS BSL_DRW_NET_EAD_PRE_CCF_AMT,
+    UNDRW_CRED_MTGT_ADJ_EAD_AMT AS BSL_UDRW_NET_EAD_PRE_CCF_AMT,
+    ORI_EXPS_PRE_CCF_PST_SPRV_AMT,
+    DRW_ORI_EXPS_PRE_CCF_SPRV_AMT,
+    UDRW_ORI_EXPS_PRE_CCF_SPRV_AMT,
+    DRW_EXPCT_LOS_AMT,
+    UDRW_EXPCT_LOS_AMT,
+    GROS_RISK_WGHT_AMT,
+    --# MAINTABLE10 fields
+    TRIM(F_MITIGANTIT)||CAST(CAST(PDCT_RANKING AS FORMAT'9(10)') AS CHAR(10))  AS F_MITIGANTIT,
+    F_RECTYP,
+    F_SITID,
+    F_ESR_SITCE,
+    F_GROUP_STEMID,
+    F_SSSYS,
+    F_BENEFICIARYIT,
+    F_BENEFICIARYIT_TYPE,
+    F_PROVIDER_TYPE,
+    F_PROVIDERIT,
+    F_PROVIDERIT_TYPE,
+    F_CRED_MTGT_CDE,
+    --# MAINTABLE9 fields
+    TRIM(G_MITIGANTIT)||CAST(CAST(PDCT_RANKING AS FORMAT'9(10)') AS CHAR(10))  AS G_MITIGANTIT,
+    TRIM(G_PDCTID)||CAST(CAST(PDCT_RANKING AS FORMAT'9(10)') AS CHAR(10))  AS G_PDCTID,
+    G_RECTYP,
+    G_SITID,
+    G_ESR_SITCE,
+    G_REGULATOR_CODE,
+    G_BASEL_2_APRC_COD,
+    G_MITIGANT_VAL_AMT,
+    G_RGLT_CLTRL_TYPE,
+    DRW_ORIG_EXPS_PRE_CV_FCTR_AMT AS G_DRW_ORI_EXPS_PRE_CCF_SPRV_AM,
+    UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT AS G_UDRW_ORI_EXPS_PRE_CCF_SPRV_A,
+    DRW_CRED_MTGT_ADJ_RWA_AMT AS G_DRW_CRED_MTGT_ADJ_RWA_AMT,
+    UDRW_CRED_MTGT_ADJ_RWA_AMT AS G_UDRW_CRED_MTGT_ADJ_RWA_AMT,
+    DRW_EXPCT_LOS_AMT AS G_DRW_EXPCT_LOS_AMT,
+    UDRW_EXPCT_LOS_AMT AS G_UDRW_EXPCT_LOS_AMT,
+    G_CRED_MTGT_TYPE,
+    G_MTGT_GROS_AMT,
+    G_DRW_MTGT_GROS_AMT,
+    G_UDRW_MTGT_GROS_AMT,
+    TRIM(H_MITIGANTIT)||CAST(CAST(PDCT_RANKING AS FORMAT'9(10)') AS CHAR(10))  AS H_MITIGANTIT,
+    TRIM(H_PDCTID)||CAST(CAST(PDCT_RANKING AS FORMAT'9(10)') AS CHAR(10))  AS H_PDCTID,
+    H_RECTYP,
+    H_SITID,
+    H_ESR_SITCE,
+    H_ARRG_TYPE,
+    H_RELN_TYPE,
+   --requirement 6.1 to 6.3
+    DELINQUENCY_BAND,
+    --Added for SIF V3
+    LGD_MODEL_SIF AS LGD_MODEL,
+    EAD_MODEL_SIF AS EAD_MODEL,
+    PD_MODEL_SIF AS PD_MODEL,
+        SPRV_OUT_LOC_REP_CCY_AMT,
+        SPRV_OUT_GL_KEY,
+        SPRV_OUT_GRCA_KEY,
+        SPRV_LOC_REP_CCY_AMT,
+        DEFAULT_INDICATOR,
+        PROP_CTRY_CDE, --# CL 02042015 - Added Field PROP_CTRY_CDE
+                --Included as part of EnM changes to ABD
+                NEW_SITID,
+                NEW_ORGN_UNITIT,
+                                -- Included ABD_INTRNL_STEMID as part of Merge, De-merge changes on ABD
+                                ABD_INTRNL_STEMID
+FROM (
+SELECT
+         --#1
+         'E' AS RECTYP,
+         --#2
+        LCDMSIFSITEIDENTIFIE.CNTLDAT  AS SITIDentifier,
+         LCDMSIFESRSITECODE.CNTLDAT  AS ESR_SITCE,
+         'CDUUK' AS Group_STEMIDentifier,
+         --#5
+         T1.SSSYS AS Loc_SSSYSIT,
+        -- ADD default_ind and delinquency_band as part of the requirement 6.1 to 6.3
+        TRIM(SUBSTR(T1.SSSYS,1,1)) || SUBSTR(T3.ASSET_CLASS,1,2) || COALESCE(TRIM(SUBSTR(T6.RPT_PDCTUCT_GROUP,1,5)),'XXXXX') || COALESCE(TRIM(T1.SECURITISED_IND),'N') ||
+        COALESCE(TRIM(CUSTOMER_GROUP),'XXX') || SUBSTR(COALESCE(T4.PDBAND,'000.000'),1,3) || SUBSTR(COALESCE(T4.PDBAND,'000.000'),5,3) || COALESCE(SUBSTR(T5.PDCTMatDate,1,2),99) ||
+        COALESCE(SUBSTR(T5.PDCTMatDate,4,2),99) || COALESCE(SUBSTR(T5.PDCTMatDate,7,2),99) || COALESCE(EndofPrdBalLocRepCurr_Sign,'X') || COALESCE(TRIM(T5.ResMat),'99-99-99') ||
+        COALESCE(TRIM(T3.DEFAULT_IND),'X') || COALESCE(TRIM(T3.DELINQUENCY_BAND),'XX') ||
+                COALESCE(TRIM(CUSTOMER_SUBGRP1),' ')||COALESCE(TRIM(CUSTOMER_SUBGRP2),' ')||
+                /*COALESCE(CUSTOMER_SUBGRP1,' ')||*/
+                COALESCE(TRIM(T3.ACCT_PORTF_CDE),'XX')||COALESCE(TRIM(LGD_MODEL_SIF),'XX') ||COALESCE(TRIM(EAD_MODEL_SIF),'XX')||COALESCE(TRIM(PD_MODEL_SIF),'XX') ||
+                TRIM(T1.PDCTUCT_TYPE)||COALESCE(TRIM(GRCA.GRCA_CODE),'XX')||COALESCE(TRIM(NEW_SITID),'XX')||COALESCE(TRIM(NEW_ORGN_UNITIT),'XX')  AS Account_DealITentifier_OLD, -- Added GRCA_CODE column as part of CR0003 BID2712 - BAU ABD Retail SIF Consolidation
+        'MB0001' AS Organisation_UnitIT,
+        CASE
+            WHEN T3.ASSET_CLASS = 'QRRE' THEN  'SIF_DEF_CUST_QRRERet'
+            WHEN T3.ASSET_CLASS = 'OTHR' THEN  'SIF_DEF_CUST_OTHRRet'
+            WHEN T3.ASSET_CLASS = 'RSMG' THEN  'SIF_DEF_CUST_RSMGRet'
+            WHEN T3.ASSET_CLASS = 'UNKN' THEN  'SIF_DEF_CUST_UNKNSME'
+            WHEN T3.ASSET_CLASS = 'SMEO' THEN  'SIF_DEF_CUST_SMEOSME'
+            ELSE 'SIF_DEF_CUST_UNKNSME'
+        END AS CustomerITentifier,
+        GRP_IPTYPE.CNTLDAT AS CustomerITentifier_Type,
+        --#10
+        T6.RPT_PDCTUCT_GROUP AS Loc_PDCTuct_Type_Code,
+        COALESCE(T2.Group_PDCTuct_Type_Code,'ALNS') AS Group_PDCTuct_Type_Code,
+        COALESCE (T1.BASEL_2_APRC_COD, 'IRBA') AS Basel_2_Approach,
+        DEFBANKTRADE.CNTLDAT AS Banking_Trading_Indicator,
+        COALESCE(TRIM(T1.SECURITISED_IND), 'N') AS Securitised_Indicator,
+         --#15
+        TRIM(CUSTOMER_GROUP) AS Customer_Group,
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                COALESCE(T4.PDBAND,'000.000')
+                        ELSE
+                                NULL
+                END
+        AS Probability_of_Def,
+        T5.PDCTMatDate AS PDCTuctMaturityDate,
+--        SUM(COALESCE(T6.GL_BAL , T1.ACT_LED_BAL_LOC) ) * 100 AS EndofPrdBalLocRepCurr, (Changed Refer GL_BAL_LOC instead of GL_BAL as part of CR201507)
+        SUM(COALESCE(T6.GL_BAL_LOC  , T1.ACT_LED_BAL_LOC) ) * 100 AS EndofPrdBalLocRepCurr,
+         CASE
+--               WHEN COALESCE(T6.GL_BAL , T1.ACT_LED_BAL_LOC) <= 0 THEN 'C'  (Changed Refer GL_BAL_LOC instead of GL_BAL as part of CR201507)
+          WHEN COALESCE(T6.GL_BAL_LOC , T1.ACT_LED_BAL_LOC) <= 0 THEN 'C'
+          ELSE 'D'
+         END AS EndofPrdBalLocRepCurr_Sign,
+         --#20
+         'XX' AS EndofPrdBalLocRecKey,
+        COALESCE(TRIM(GRCA.GRCA_CODE),'XX') AS EndofPrdBalGroupRecKey, -- CR0003 BID2712 - BAU ABD Retail SIF Consolidation
+            COALESCE(T2.BIS_2_Asset_Type, 'Oth Retail Exposures') AS BIS2AssetType,
+            --#23
+        CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                COALESCE( T2. Exposure_Subtype ,'Other Retail Exposures')
+                        ELSE
+                                CASE WHEN Past_Due_Indicator ='Y'
+                                        THEN
+                                                'Past Due Items STD'
+                                        ELSE
+                                                'Retail STD'
+                                END
+                END AS Exposure_Subtype,
+        'Retail' AS Exp_Type,
+         --requirement 6.1 to 6.3 --#25
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                COALESCE(TRIM(T3.DEFAULT_IND),' ')
+                        ELSE
+                                CASE WHEN (TRIM(T3.DELINQUENCY_BAND) = '0' OR TRIM(T3.DELINQUENCY_BAND) = '1' OR TRIM(T3.DELINQUENCY_BAND) = '2' OR TRIM(T3.DELINQUENCY_BAND) = '3' OR TRIM(T3.DELINQUENCY_BAND)= '99')
+                                        THEN
+                                                'N'
+                                        ELSE
+                                               'Y'
+                                END
+                END
+        AS Past_Due_Indicator,
+
+        COALESCE(T2.Regulatory_PDCTuct_Type,'Loan and Deposit') AS Regulatory_PDCTuct_Type,
+        UKREGULATOR.CNTLDAT AS Regulator,
+        T5.ResMat AS Residual_Maturity,
+        0 AS WgtAvgLGDFactorLocRepCurr,
+        --#30
+        0 AS WgtAvgCrdConvFactorLocRepCurr,
+        --#31
+        --#IA 17062015 - QC 136
+        CASE
+            WHEN Basel_2_Approach <> 'STDA'
+                THEN
+                    CASE
+                        WHEN SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) <> 0
+                        AND  SUM(COALESCE(T3.LOSS_GIVEN_DEFAULT,0)) <> 0
+                        AND  Probability_of_Def = '100.000'
+                            THEN
+                                CAST(CAST(SUM(COALESCE(T3.LOSS_GIVEN_DEFAULT,0)) AS DECIMAL (18,4)) / CAST(SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) AS DECIMAL(18,4)) AS DECIMAL(6,4)) * 100
+                        WHEN SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) <> 0
+                        AND  SUM(COALESCE(T3.LGD_DOWNTURN,0)) <> 0
+                            THEN
+                                CAST(CAST(SUM(COALESCE(T3.LGD_DOWNTURN,0)) AS DECIMAL (18,4)) / CAST(SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) AS DECIMAL(18,4)) AS DECIMAL(6,4)) * 100
+                        ELSE 0
+                    END
+            ELSE
+                0
+        END
+        AS CrdMtgAdjLGDLocRepCurr,
+        0 AS Loss_Given_Def,
+              CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                               NULL
+                        ELSE
+                                CASE WHEN DEFAULT_INDICATOR = 'Y'
+                                        THEN
+                                                '100'
+                                        ELSE
+                                                CASE WHEN XHIER.BASEL_PORTF_CDE = STDABASELPORTFCDE2.CNTLDAT
+                                                        THEN
+                                                                CAST (RISKWEIGHT_PCT_STDA2.CNTLDAT*100 AS INTEGER)
+                                                        ELSE
+                                                                CAST (RISKWEIGHT_PCT_STDA1.CNTLDAT*100 AS INTEGER)
+                                                END
+                                END
+                END
+
+        AS Risk_Weight,
+        --# 34
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                SUM(T3.EXPOSURE_DEFAULT)
+                        ELSE
+                               CASE WHEN  (ORIG_EXPSR_PRE_CV_FCTR_AMT - SPRV_OUT_LOC_REP_CCY_AMT) > 0
+                                THEN
+                                        ORIG_EXPSR_PRE_CV_FCTR_AMT - SPRV_OUT_LOC_REP_CCY_AMT
+                                ELSE
+                                        0
+                                END
+                END
+        AS CredMitAdjExpDefLocRepCurr,
+         --REQUIREMENT 3.1 3.2 --#35
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                SUM(CASE
+                                WHEN T3.ASSET_CLASS='SMEO' AND RAWSCALING.CNTLDAT='Y' THEN T3.SCALED_RWA
+                                        ELSE T3.RISK_WEIGHTD_ASSET
+                                END )*100
+                       ELSE
+                                SUM(T3.RISK_WEIGHTD_ASSET)*100
+                END
+         AS CredMitAdjRskWgtAssLocRepCurr,
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                SUM(T3.EXPOSURE_DEFAULT)
+                        ELSE
+                                ORIG_EXPSR_PRE_CV_FCTR_AMT
+                END
+          AS GrossExpDefLocRepCurr,
+        ' ' AS UndrawnGrossExpDefLocRepCurr,
+        ' ' AS DrawnGrossExpDefLocRepCurr,
+        --# 39
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                SUM(COALESCE(T3.EXPECTED_LOSS,0))
+
+                        ELSE
+                                        0
+                END
+                                 AS ExpectedLossLocRepCurr,
+                        CASE
+                                        WHEN Basel_2_Approach <> 'STDA'
+                                        THEN
+                                            NULL
+                                ELSE
+                                        CredMitAdjRskWgtAssLocRepCurr*CPTLRATIO.CNTLDAT
+                                END
+      AS CredMitAdjCapitalReqLocRepCurr,
+         --REQUIREMENT 3.1 3.2 --#41
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                 SUM(CASE
+                                        WHEN  T3.ASSET_CLASS='SMEO' AND RAWSCALING.CNTLDAT='Y' THEN T3.SCALED_RWA
+                                                ELSE
+                                                T3.RISK_WEIGHTD_ASSET
+                                        END )*100
+                        ELSE
+                                SUM(T3.RISK_WEIGHTD_ASSET)*100
+                END
+         AS InterCpyRiskWgtAssetLocRepCur,
+        ' ' AS CCF,
+        ' ' AS OriginalMaturity,
+        --#44
+                --Demised this logic as part of Customer Sub Group project
+         --CASE
+          --WHEN TRIM(CUSTOMER_GROUP) = PFS0.CNTLDAT THEN PFS1.CNTLDAT
+          --WHEN TRIM(CUSTOMER_GROUP) = COM0.CNTLDAT THEN COM1.CNTLDAT
+          --WHEN TRIM(CUSTOMER_GROUP) = CIBM0.CNTLDAT THEN CIBM1.CNTLDAT
+          --WHEN TRIM(CUSTOMER_GROUP) = GPB0.CNTLDAT THEN GPB1.CNTLDAT
+          --WHEN TRIM(CUSTOMER_GROUP) = OTH0.CNTLDAT THEN OTH1.CNTLDAT
+        --END AS CUSTOMER_SUBGRP1,
+                --Added this logic as part of Customer Sub Group project
+                TRIM(CUSTOMER_SUBGRP1) AS CUSTOMER_SUBGRP1,
+                --Demised this logic as part of Customer Sub Group project
+        --CASE
+            --WHEN TRIM(CUSTOMER_GROUP) = PFS0.CNTLDAT THEN PFS2.CNTLDAT
+            --WHEN TRIM(CUSTOMER_GROUP) = COM0.CNTLDAT THEN COM2.CNTLDAT
+          --WHEN TRIM(CUSTOMER_GROUP) = CIBM0.CNTLDAT THEN CIBM2.CNTLDAT
+--            WHEN TRIM(CUSTOMER_GROUP) = GPB0.CNTLDAT THEN GPB2.CNTLDAT
+            --WHEN TRIM(CUSTOMER_GROUP) = OTH0.CNTLDAT THEN OTH2.CNTLDAT
+        --END AS CUSTOMER_SUBGRP2,
+                --Added this logic as part of Customer Sub Group project
+                TRIM(CUSTOMER_SUBGRP2) AS CUSTOMER_SUBGRP2,
+        --#46
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                SUM(COALESCE(T3.LOSS_GIVEN_DEFAULT,0))
+                        ELSE
+                                0
+                END
+        AS LGD_summed,
+        SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) AS EAD_summed,
+        COUNT(*) AS PreAggPDCTuctCount,
+                --## corep fields
+        ' ' AS CURR_LTV_PCT,
+        T5.ResMat AS MTUR_EFF_DAY_CNT,
+        HBEUUKCCY.CNTLDAT AS EOP_BAL_CCY_CODE,
+        0 AS EOP_BAL_AMT,
+         --#53
+        HBEUUKCCY.CNTLDAT AS ACT_CCY_CDE,
+         'XX' AS EAD_GL_KEY,
+        'XX' AS EAD_GRCA_KEY,
+        ' ' AS EXPCT_LGD_AMT,
+
+        --#57
+        -- Derivation is the same for Revolvers, Applications and Loans
+        -- Transformation rule = 34 * 62 / 61
+        -- Fields CredMitAdjExpDefLocRepCurr, DRW_ORIG_EXPS_PRE_CV_FCTR_AMT,ORIG_EXPSR_PRE_CV_FCTR_AMT and ORIG_EXPSR_PRE_CV_FCTR_AMT were already summed up in the query. There is no need to use the function SUM()  again
+        -- Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+        -- BAU CR201515 - 2.1.5 - Drawn Credit Mitigant Adjusted Exposure At Default in Local Reporting Currency
+         CASE
+         WHEN Basel_2_Approach <> 'STDA'
+             THEN
+                 CASE
+                 WHEN ASSETCLASS='RSMG'
+                     THEN --Residential Mortgage
+                         (CredMitAdjExpDefLocRepCurr * DRW_ORIG_EXPS_PRE_CV_FCTR_AMT) / CASE WHEN ORIG_EXPSR_PRE_CV_FCTR_AMT = 0 THEN 1 ELSE ORIG_EXPSR_PRE_CV_FCTR_AMT  END
+                 ELSE
+                     SUM(
+                         CASE
+                         WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0
+                             THEN
+                                 CASE
+                                 WHEN T3.ASSET_CLASS = 'RSMG' AND FD_SMT_MTG_IND <> 'Y' AND T6.DEB_ACT_LED_BAL_LOC <> 0
+                                     THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                 WHEN T6.DEB_ACT_LED_BAL_LOC * 100 > COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                     THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                 ELSE
+                                     T6.DEB_ACT_LED_BAL_LOC * 100
+                                END
+                         ELSE
+                             0
+                         END
+                     )
+                 END
+         ELSE
+             CASE
+             WHEN SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) >= 0
+                 THEN COALESCE(DRW_ORIG_EXPS_PRE_CV_FCTR_AMT,0)
+             ELSE
+                 0
+             END
+         END
+         AS DRW_CRED_MTGT_ADJ_EAD_AMT,
+
+        --#58
+        -- Derivation is the same for Revolvers, Applications and Loans
+        -- Transformation rule =  34 - 57
+        -- Fields CredMitAdjExpDefLocRepCurr, DRW_CRED_MTGT_ADJ_EAD_AMT, were already summed up in the query. There is no need to use the function SUM()  again
+        -- Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+         CASE
+         WHEN Basel_2_Approach <> 'STDA'
+             THEN
+                 CASE
+                 WHEN ASSETCLASS = 'RSMG'
+                     THEN  --Residential Mortgage
+                         COALESCE(CredMitAdjExpDefLocRepCurr,0) - COALESCE(DRW_CRED_MTGT_ADJ_EAD_AMT,0)
+                 ELSE
+                     SUM(
+                         CASE
+                         WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+                             CASE
+                             WHEN T3.ASSET_CLASS = 'RSMG' AND  FD_SMT_MTG_IND <> 'Y' AND T6.DEB_ACT_LED_BAL_LOC <> 0
+                                 THEN 0
+                             ELSE
+                                 CASE
+                                 WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <  T6.DEB_ACT_LED_BAL_LOC * 100
+                                     THEN 0
+                                 ELSE
+                                     COALESCE(T3.EXPOSURE_DEFAULT,0) - T6.DEB_ACT_LED_BAL_LOC  * 100
+                                 END
+                             END
+                         ELSE
+                             0
+                         END
+                     )
+                 END
+         ELSE
+             0
+         END
+         AS UNDRW_CRED_MTGT_ADJ_EAD_AMT,
+
+                --#59
+                  ---Derivation is the same for Revolvers, Applications and Loans
+                  -- Transformation rule = 35 * 62 / 61
+                  --Fields CredMitAdjRskWgtAssLocRepCurr, DRW_ORIG_EXPS_PRE_CV_FCTR_AMT,  ORIG_EXPSR_PRE_CV_FCTR_AMT, ORIG_EXPSR_PRE_CV_FCTR_AMT were already summed up in the query. There is no need to use the function SUM()  again
+                --Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                CASE
+          WHEN    ASSETCLASS='RSMG' THEN                  --Residential Mortgage
+                        (CredMitAdjRskWgtAssLocRepCurr * DRW_ORIG_EXPS_PRE_CV_FCTR_AMT) / CASE WHEN ORIG_EXPSR_PRE_CV_FCTR_AMT = 0 THEN 1 ELSE ORIG_EXPSR_PRE_CV_FCTR_AMT  END
+                ELSE
+                        SUM(
+                        CAST(
+                        CASE WHEN  COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN CAST(
+                                CASE
+                                       WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+                                                CASE
+                                                        WHEN T3.ASSET_CLASS = 'RSMG' AND FD_SMT_MTG_IND<> 'Y' AND      T6.DEB_ACT_LED_BAL_LOC <> 0 THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                        WHEN T6.DEB_ACT_LED_BAL_LOC *100 > COALESCE(T3.EXPOSURE_DEFAULT,0) THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                ELSE  T6.DEB_ACT_LED_BAL_LOC *100
+                                                END
+                ELSE 0
+                END AS DECIMAL(18,4)) / CAST(COALESCE(T3.EXPOSURE_DEFAULT,1) AS DECIMAL(18,4))*
+           --REQUIREMENT 3.1 3.2
+                                CASE
+                                        WHEN T3.ASSET_CLASS='SMEO' AND RAWSCALING.CNTLDAT='Y' THEN COALESCE(T3.SCALED_RWA,1)*100
+                                ELSE COALESCE(T3.RISK_WEIGHTD_ASSET,1)*100 END
+            ELSE 0
+            END AS DECIMAL (18,0)))
+                END
+                        ELSE
+                                CredMitAdjRskWgtAssLocRepCurr
+                END
+         AS DRW_CRED_MTGT_ADJ_RWA_AMT,
+          --#60 REQUIREMENT 3.1 3.2
+                  ---Derivation is the same for Revolvers, Applications and Loans
+                  -- Transformation rule = 35 - 59
+                  --Fields CredMitAdjRskWgtAssLocRepCurr, DRW_CRED_MTGT_ADJ_RWA_AMT,   were already summed up in the query. There is no need to use the function SUM()  again
+                --Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+                        CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                CASE
+                                WHEN    ASSETCLASS='RSMG' THEN                  --Residential Mortgage
+                                COALESCE( CredMitAdjRskWgtAssLocRepCurr,0) -COALESCE(DRW_CRED_MTGT_ADJ_RWA_AMT ,0)
+                                        ELSE
+                        SUM
+                        (
+                        ( CASE WHEN T3.ASSET_CLASS='SMEO' AND RAWSCALING.CNTLDAT='Y' THEN (T3.SCALED_RWA)*100 ELSE T3.RISK_WEIGHTD_ASSET*100 END) - CAST(
+                        CASE
+                                WHEN  COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN CAST(
+                                        CASE
+                                                WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+                                                CASE
+                                                        WHEN T3.ASSET_CLASS = 'RSMG' AND     FD_SMT_MTG_IND<> 'Y' AND      T6.DEB_ACT_LED_BAL_LOC <> 0 THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                        WHEN T6.DEB_ACT_LED_BAL_LOC *100 > COALESCE(T3.EXPOSURE_DEFAULT,0) THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                ELSE  T6.DEB_ACT_LED_BAL_LOC *100
+                                                END
+                                        ELSE 0
+                                        END AS DECIMAL(18,4)) / CAST(COALESCE(T3.EXPOSURE_DEFAULT,1) AS DECIMAL(18,4))* CASE
+                                                --REQUIREMENT 3.1 3.2
+                                WHEN  T3.ASSET_CLASS='SMEO' AND RAWSCALING.CNTLDAT='Y' THEN COALESCE(T3.SCALED_RWA,1)*100
+                                ELSE COALESCE(T3.RISK_WEIGHTD_ASSET,1)*100 END
+                        ELSE 0
+                        END AS DECIMAL (18,0)))
+                END
+                        ELSE
+                                0
+                        END
+            AS UDRW_CRED_MTGT_ADJ_RWA_AMT,
+         --#61
+         -- Derivation is the same for Revolvers, Applications and Loans
+         -- Transformation rule =  62 + 63
+         -- Fields DRW_ORIG_EXPS_PRE_CV_FCTR_AMT, UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT, were already summed up in the query. There is no need to use the function SUM()  again
+         -- Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+         -- BAU CR201515 - 2.1.4 - Original Exposures Pre Conversion Factors in Local Reporting Currency
+
+          COALESCE(DRW_ORIG_EXPS_PRE_CV_FCTR_AMT,0) + COALESCE(UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT,0) AS ORIG_EXPSR_PRE_CV_FCTR_AMT,
+
+         --#62
+         -- (09-10-2014) QC 69 - LOGIC CHANGE replace the existing logic with a check on the end of period balance from PDCT Core table (T6.ACT_LED_BAL).
+         -- If it is a negative value then set to the value (without the sign). Otherwise set to it 0(zero).
+         -- BAU CR201515 - 2.1.2 - Amended Drawn Original Exposures Pre Conversion Factors in Local Reporting Currency
+         --                        Field PDCTUCTTYPE was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 124
+          CASE
+          WHEN PDCTUCTTYPE = 'PLN'
+              THEN
+                  CASE
+                  WHEN EndofPrdBalLocRepCurr  < 0
+                      THEN EndofPrdBalLocRepCurr * -1
+                  ELSE
+                      0
+                  END
+          ELSE
+              SUM(
+                  CASE
+                  WHEN (COALESCE(T6.ACT_LED_BAL_LOC,0) < 0)
+                  -- It is a debit value so use it -- Multiply by *100 to convert to pence
+                      THEN (T6.ACT_LED_BAL_LOC * -1) * 100
+                  -- It is a credit value so set it to 0
+                  ELSE
+                      0
+                  END
+              )
+          END
+          AS DRW_ORIG_EXPS_PRE_CV_FCTR_AMT,
+
+         --#63
+         -- Derivation is the same for Revolvers, Applications and Loans
+         -- As the amount fields weren't summed up yet in the query, we can use the T3.ASSET_CLASS inside the SUM() function
+         -- BAU CR201515 - 2.1.3 - Undrawn Original Exposures Pre Conversion Factors in Local Reporting Currency
+          CASE
+          WHEN Basel_2_Approach <> 'STDA' AND SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) > 0
+              THEN
+                  SUM(
+                      CASE
+                      WHEN T3.ASSET_CLASS='RSMG' THEN --Residential Mortgage
+                          CASE
+                          WHEN T6.RVLR_CRDT_LN_IND = 'Y'  -- Revolver
+                              THEN
+                                  CASE
+                                  WHEN --if the result of the subtraction is < 0 (negative) then result must be set to 0 (Zero).
+                                      ---First we will check the result of the subtraction
+                                      CASE   ---Actual Limit is the greater of MAINTABLE5.ADVISED_LIMIT or MAINTABLE5.TMP_LIMIT
+                                      WHEN COALESCE(CURRACC.ADVISED_LIMIT,0) >= COALESCE(CURRACC.TMP_LIMIT,0)
+                                          THEN
+                                          COALESCE(CURRACC.ADVISED_LIMIT,0) * 100 -- Converting to pence
+                                      ELSE
+                                          COALESCE(CURRACC.TMP_LIMIT,0) * 100 --- Converting to pence
+                                      END - (COALESCE(T6.DEB_ACT_LED_BAL_LOC,0) * 100) < 0
+                                      --- End of checking
+                                      THEN
+                                          0
+                                  ELSE
+                                      CASE   ---Actual Limit is the greater of MAINTABLE5.ADVISED_LIMIT or MAINTABLE5.TMP_LIMIT
+                                      WHEN COALESCE(CURRACC.ADVISED_LIMIT,0) >= COALESCE(CURRACC.TMP_LIMIT,0)
+                                          THEN
+                                          COALESCE(CURRACC.ADVISED_LIMIT,0) * 100 -- Converting to pence
+                                      ELSE
+                                          COALESCE(CURRACC.TMP_LIMIT,0) * 100 --- Converting to pence
+                                      END - (COALESCE(T6.DEB_ACT_LED_BAL_LOC,0) * 100)
+                                  END
+                              ELSE
+                                  CASE
+                                  WHEN PDCTMTG.APP_LOAN_MKR = 'A' -- Applications
+                                      THEN
+                                          CASE
+                                          --if the result of the subtraction is < 0 (negative) then result must be set to 0 (Zero).
+                                          WHEN (COALESCE(PDCTMTG.LOAN_AMOUNT,0) - (COALESCE(T6.DEB_ACT_LED_BAL_LOC,0) )) *100 < 0
+                                              THEN 0
+                                          ELSE
+                                              (COALESCE(PDCTMTG.LOAN_AMOUNT,0) - (COALESCE(T6.DEB_ACT_LED_BAL_LOC,0))) * 100
+                                          END
+                                  ELSE
+                                      0
+                                  END
+                              END -- End of Revolver RVLR_CRDT_LN_IND = 'Y'
+                          ELSE
+                              CASE
+                              WHEN COALESCE(t2.GROUP_PDCTUCT_TYPE_CODE,'ALNS') IN ('ALNS','AHML','RM05')
+                                  THEN 0
+                              ELSE
+                                  COALESCE(T3.EXPOSURE_UNDRAWN,0)
+                              END
+                      END -- End of Residential Mortgage ASSET_CLASS = 'RSMG'
+                  ) -- End of Sum statement
+          ELSE
+              0
+          END
+          AS UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT,
+
+        --#64
+         SUM(COALESCE(T3.EXPOSURE_DEFAULT,0)) AS BSL_NET_EAD_PRE_CCF_AMT,
+         -- Next 2 fields are set to zero as are direct mapped from other fields see outer select statement above
+          0  AS BSL_DRW_NET_EAD_PRE_CCF_AMT,
+          0  AS BSL_UDRW_NET_EAD_PRE_CCF_AMT,
+                --#67
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                            ' '
+                        ELSE
+                           CASE WHEN   (ORIG_EXPSR_PRE_CV_FCTR_AMT - SPRV_LOC_REP_CCY_AMT) > 0
+                                THEN
+                                        ORIG_EXPSR_PRE_CV_FCTR_AMT - SPRV_LOC_REP_CCY_AMT
+                                ELSE
+                                        0
+                        END
+
+
+                END
+                AS ORI_EXPS_PRE_CCF_PST_SPRV_AMT,
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                            ' '
+                        ELSE
+                                ORI_EXPS_PRE_CCF_PST_SPRV_AMT
+                END
+                AS DRW_ORI_EXPS_PRE_CCF_SPRV_AMT,
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                ' '
+                        ELSE
+                                0
+                END
+         AS UDRW_ORI_EXPS_PRE_CCF_SPRV_AMT,
+        --# 70
+                ---Derivation is the same for Revolvers, Applications and Loans
+                -- Transformation rule =  39 * 62 / 61
+                --Fields ExpectedLossLocRepCurr, DRW_ORIG_EXPS_PRE_CV_FCTR_AMT, ORIG_EXPSR_PRE_CV_FCTR_AMT,  ORIG_EXPSR_PRE_CV_FCTR_AMT  were already summed up in the query. There is no need to use the function SUM()  again
+                --Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                     CASE WHEN    ASSETCLASS='RSMG' THEN                --Residential Mortgage
+                        (ExpectedLossLocRepCurr * DRW_ORIG_EXPS_PRE_CV_FCTR_AMT) / CASE WHEN ORIG_EXPSR_PRE_CV_FCTR_AMT = 0 THEN 1 ELSE ORIG_EXPSR_PRE_CV_FCTR_AMT END
+                                        ELSE
+                        SUM(
+                        CAST(
+                        CASE
+                                WHEN  COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN CAST(
+                                        CASE
+                                                WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+                                                CASE
+                                                        WHEN    T3.ASSET_CLASS = 'RSMG' AND     FD_SMT_MTG_IND<> 'Y'  AND      T6.DEB_ACT_LED_BAL_LOC <> 0 THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                        WHEN T6.DEB_ACT_LED_BAL_LOC *100 > COALESCE(T3.EXPOSURE_DEFAULT,0) THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                        ELSE  T6.DEB_ACT_LED_BAL_LOC *100
+                                                END
+                                        ELSE 0
+                                        END AS DECIMAL(18,4)) / CAST(COALESCE(T3.EXPOSURE_DEFAULT,1) AS DECIMAL(18,4))* COALESCE(T3.EXPECTED_LOSS,0)
+                        ELSE 0
+                        END AS DECIMAL (18,0)))
+                END
+                        ELSE
+                                0
+                END
+        AS DRW_EXPCT_LOS_AMT,
+         --#71
+                 ---Derivation is the same for Revolvers, Applications and Loans
+                 -- Transformation rule =  39 - 70
+                 --Fields ExpectedLossLocRepCurr, DRW_EXPCT_LOS_AMT,  were already summed up in the query. There is no need to use the function SUM()  again
+                 --Field ASSETCLASS was created to be able to refer the summed up fields in the query. This field is being aggreated in the position 112
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+           CASE
+                        WHEN    ASSETCLASS='RSMG' THEN                 --Residential Mortgage
+                        COALESCE(ExpectedLossLocRepCurr,0) - COALESCE( DRW_EXPCT_LOS_AMT,0)
+                ELSE
+                        SUM(
+                        COALESCE(T3.EXPECTED_LOSS,0) - CAST(
+                        CASE
+                                WHEN  COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN CAST(
+                                        CASE
+                                                WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+                                                CASE
+                                                        WHEN T3.ASSET_CLASS = 'RSMG' AND     FD_SMT_MTG_IND<> 'Y' AND      T6.DEB_ACT_LED_BAL_LOC <> 0 THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                        WHEN T6.DEB_ACT_LED_BAL_LOC *100 > COALESCE(T3.EXPOSURE_DEFAULT,0) THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                                                ELSE  T6.DEB_ACT_LED_BAL_LOC *100
+                                                END
+                                        ELSE 0
+                                        END AS DECIMAL(18,4)) / CAST(COALESCE(T3.EXPOSURE_DEFAULT,1) AS DECIMAL(18,4))* COALESCE(T3.EXPECTED_LOSS,0)
+                        ELSE 0
+                        END AS DECIMAL (18,0)))
+                 END
+                        ELSE
+                                0
+                END
+       AS UDRW_EXPCT_LOS_AMT,
+         --#72
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                               NULL
+                        ELSE
+                                CASE WHEN DEFAULT_INDICATOR = 'Y'
+                                        THEN
+                                                '100'
+                                        ELSE
+                                                CASE WHEN XHIER.BASEL_PORTF_CDE = STDABASELPORTFCDE2.CNTLDAT
+                                                        THEN
+                                                                CAST (RISKWEIGHT_PCT_STDA2.CNTLDAT*100 AS INTEGER)
+                                                        ELSE
+                                                                CAST (RISKWEIGHT_PCT_STDA1.CNTLDAT*100 AS INTEGER)
+                                                END
+                                END
+                END
+          AS GROS_RISK_WGHT_AMT,
+        --# 73
+        --# MAINTABLE10 fields
+        CASE
+          WHEN    T3.ASSET_CLASS = 'RSMG' THEN 'MIT' ||TRIM(Account_DealITentifier_NEW)
+            ELSE NULL
+        END AS F_MITIGANTIT,
+         --#74
+        'F' AS F_RECTYP,
+        LCDMSIFSITEIDENTIFIE.CNTLDAT AS F_SITID,
+        LCDMSIFESRSITECODE.CNTLDAT AS F_ESR_SITCE,
+        'CDUUK' AS F_GROUP_STEMID,
+         --#78
+        T1.SSSYS AS F_SSSYS,
+       'SIF_DEF_CUST_RSMGRet' AS F_BENEFICIARYIT,
+        GRP_IPTYPE.CNTLDAT AS F_BENEFICIARYIT_TYPE,
+        LCDMSIFPROVIDERTYPE.CNTLDAT AS F_PROVIDER_TYPE,
+        'SIF_DEF_CUST_RSMGRet' AS F_PROVIDERIT,
+        GRP_IPTYPE.CNTLDAT AS F_PROVIDERIT_TYPE,
+         LCDMSIFCREDMITCODE.CNTLDAT AS F_CRED_MTGT_CDE,
+         --# 85
+        --# MAINTABLE9 fields
+        CASE
+                     WHEN    T3.ASSET_CLASS = 'RSMG' THEN 'MIT' || TRIM(Account_DealITentifier_NEW)
+                 ELSE NULL
+        END AS G_MITIGANTIT,
+         --#86
+        Account_DealITentifier_NEW   AS G_PDCTID,
+         'G' AS G_RECTYP,
+        LCDMSIFSITEIDENTIFIE.CNTLDAT AS G_SITID,
+        LCDMSIFESRSITECODE.CNTLDAT AS G_ESR_SITCE,
+        UKREGULATOR.CNTLDAT AS G_REGULATOR_CODE,
+        LCDMSIFBASEL2APRCCOD.CNTLDAT AS G_BASEL_2_APRC_COD,
+        --# 92
+        SUM(COALESCE(T3.DWTN_VALN_AMT,0))*100 AS G_MITIGANT_VAL_AMT,
+        LCDMSIFRGLTCLTRLTYPE.CNTLDAT AS G_RGLT_CLTRL_TYPE,
+         --#94
+         0 AS G_DRW_ORI_EXPS_PRE_CCF_SPRV_AM,
+         0 AS G_UDRW_ORI_EXPS_PRE_CCF_SPRV_A,
+        0 AS G_DRW_CRED_MTGT_ADJ_RWA_AMT,
+        0 AS G_UDRW_CRED_MTGT_ADJ_RWA_AMT,
+        0 AS G_DRW_EXPCT_LOS_AMT,
+        0 AS G_UDRW_EXPCT_LOS_AMT,
+        LCDMSIFCREDMTGTTYPE.CNTLDAT AS G_CRED_MTGT_TYPE,
+        --# 101
+         SUM(COALESCE(T3.DWTN_VALN_AMT,0)) *100 AS G_MTGT_GROS_AMT,
+        --# 102
+        SUM( CAST(
+         CASE
+          WHEN  COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN CAST(
+         CASE
+           WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+           CASE
+            WHEN    T3.ASSET_CLASS = 'RSMG'         AND     FD_SMT_MTG_IND<> 'Y'         AND      T6.DEB_ACT_LED_BAL_LOC <> 0  THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+            WHEN T6.DEB_ACT_LED_BAL_LOC *100 > COALESCE(T3.EXPOSURE_DEFAULT,0) THEN COALESCE(T3.EXPOSURE_DEFAULT,0)
+                    ELSE  T6.DEB_ACT_LED_BAL_LOC *100
+                END
+                ELSE 0
+            END AS DECIMAL(18,4)) / CAST(COALESCE(T3.EXPOSURE_DEFAULT,1) AS DECIMAL(18,4))* COALESCE(T3.DWTN_VALN_AMT,0) *100
+        ELSE 0
+        END AS DECIMAL (18,0))) AS G_DRW_MTGT_GROS_AMT,
+         --#103
+         SUM(COALESCE(T3.DWTN_VALN_AMT,0)*100 - CAST(
+         CASE
+          WHEN  COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN CAST(
+         CASE    WHEN COALESCE(T3.EXPOSURE_DEFAULT,0) <> 0 THEN
+                                                                         CASE
+        WHEN    T3.ASSET_CLASS = 'RSMG'
+        AND     FD_SMT_MTG_IND<> 'Y'
+        AND      T6.DEB_ACT_LED_BAL_LOC <> 0
+                                                                                                        THEN COALESCE(T3.EXPOSURE_DEFAULT,
+                0)
+                                                                                       WHEN T6.DEB_ACT_LED_BAL_LOC *100 > COALESCE(T3.EXPOSURE_DEFAULT,
+                0)
+                                                                                                        THEN COALESCE(T3.EXPOSURE_DEFAULT,
+                0)
+                                                                                        ELSE  T6.DEB_ACT_LED_BAL_LOC *100
+                                                                END
+                                                                ELSE 0
+                                 END AS DECIMAL(18,4)) / CAST(COALESCE(T3.EXPOSURE_DEFAULT,
+                1) AS DECIMAL(18,4))* COALESCE(T3.DWTN_VALN_AMT,0) *100
+                             ELSE 0
+                        END AS DECIMAL (18,0)))
+             AS G_UDRW_MTGT_GROS_AMT,
+                          --SIF Mitigant to Arrangement Fields - Added by Jose F Bezerra, GLTb (Brazil)
+                          --# MAINTABLE8 fields
+        --#104
+       CASE
+                 WHEN T3.ASSET_CLASS = 'RSMG'
+                         THEN 'MIT' ||TRIM(Account_DealITentifier_NEW)
+                 ELSE NULL
+       END AS  H_MITIGANTIT,
+       'H' AS H_RECTYP,
+        LCDMSIFSITEIDENTIFIE.CNTLDAT AS H_SITID,
+        --#107
+        LCDMSIFESRSITECODE.CNTLDAT AS H_ESR_SITCE,
+        ARRANGEMENTTYPE.CNTLDAT AS H_ARRG_TYPE,
+        RELATIONSHIPTYPE.CNTLDAT AS H_RELN_TYPE,
+                Account_DealITentifier_NEW   AS H_PDCTID --110
+        --requirement 6.1 to 6.3
+        ,T3.DELINQUENCY_BAND as DELINQUENCY_BAND,
+        --112 Included to be able to perform the logic in the fields 57,58,59,60,61,62,63,70,71
+        T3.ASSET_CLASS as ASSETCLASS,
+       --113 Field included to be able to load the LGD_MODEL for SIF V3 project.
+       -- BID2086 consider the BASEL Portfolio Code when the SAS-AGE Account Portfolio Code is not present.
+       CASE
+          WHEN Basel_2_Approach <> 'STDA' THEN T1.LGD_MODEL
+           ELSE  ' '
+        END AS LGD_MODEL_SIF,
+       --113 Field to load LGD_Model - Updated for RWA Calculations MIF SIF Upgrade 2015-Feb-09
+                 -- BID2086 consider the BASEL Portfolio Code when the SAS-AGE Account Portfolio Code is not present.
+
+                 CASE WHEN T1.SSSYS='RPS'
+                                THEN
+                                                                TRIM(T1.SSSYS)||T6.RPT_PDCTUCT_GROUP
+                        ELSE
+                                TRIM(T1.SSSYS)||T6.RPT_PDCTUCT_GROUP
+          END AS Account_DealITentifier_NEW, -- New PDCTID consolidated (SIFv3)
+                 --115
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                 SUM(CASE WHEN T1.PROVS_OUT_LOC IS NOT NULL THEN (T1.PROVS_OUT_LOC * 100) ELSE 0 END)
+                        ELSE
+                                 SUM(CASE WHEN COALESCE(T1.PROVS_OUT_LOC,0) < 0 THEN 0 ELSE COALESCE(T1.PROVS_OUT_LOC,0)  END) * 100
+                END
+                  AS SPRV_OUT_LOC_REP_CCY_AMT ,
+                 --116
+                  SPRVOUTKEY.CNTLDAT AS SPRV_OUT_GL_KEY ,
+                 --117
+          SPRVOUTKEY.CNTLDAT AS SPRV_OUT_GRCA_KEY ,
+                 --118
+                 CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                SUM(CASE WHEN T1.PROVS_OUT_LOC IS NOT NULL THEN (T1.PROVS_OUT_LOC * 100) ELSE 0 END)
+                        ELSE
+                                 SUM(CASE WHEN COALESCE(T1.PROVS_OUT_LOC,0) < 0 THEN 0 ELSE COALESCE(T1.PROVS_OUT_LOC,0)  END) * 100
+                        END
+                AS SPRV_LOC_REP_CCY_AMT,
+                 --119
+                CASE
+                        WHEN Basel_2_Approach <> 'STDA'
+                        THEN
+                                ' '
+                        ELSE
+                                T3.DEFAULT_IND
+                END
+                AS DEFAULT_INDICATOR,
+                --120
+               CPTLRATIO.CNTLDAT AS CPTL_RATIO_CNTLDAT,
+                --121
+       CASE
+          WHEN Basel_2_Approach <> 'STDA' THEN T1.EAD_MODEL
+           ELSE  ' '
+        END AS EAD_MODEL_SIF,
+            --122
+       CASE
+          WHEN Basel_2_Approach <> 'STDA' THEN T1.PD_MODEL
+           ELSE  ' '
+        END AS PD_MODEL_SIF,
+        --123
+        --# BEGIN - CL 02042015 - Added field PROP_CTRY_CDE
+        CASE WHEN T3.ASSET_CLASS = 'RSMG' OR CustomerITentifier='SIF_DEF_CUST_RSMGRet' Then
+            DEFAULTCOUNTRY.CNTLDAT
+        ELSE ' ' END AS PROP_CTRY_CDE ,
+        --# END - CL 02042015 - Added field PROP_CTRY_CDE
+
+        --124 Included to be able to perform the logic in the field 62
+        T1.PDCTUCT_TYPE as PDCTUCTTYPE,
+                --Included as part of EnM changes to ABD
+                CAST( CASE      WHEN TRIM(T1.NEW_BASE_ENT) = TRIM(BASEENTHRFB.CNTLDAT) THEN LCDMSIFSITEIDENTIFI2.CNTLDAT
+                                        WHEN TRIM(T1.NEW_BASE_ENT) = TRIM(BASEENTMDBK.CNTLDAT) THEN LCDMSIFSITEIDENTIFIE.CNTLDAT
+                                        ELSE LCDMSIFSITEIDENTIFI2.CNTLDAT END AS CHAR(4)) AS NEW_SITID,
+                CAST( T1.LEVEL2_HIER AS CHAR(10)) AS NEW_ORGN_UNITIT
+
+                -- Included ABD_INTRNL_STEMID as part of Merge, De-merge changes on ABD
+                , CASE WHEN TRIM(NEW_SITID) = TRIM(LCDMSIFSITEIDENTIFIE.CNTLDAT)
+                                        THEN intermdt.CNTLDAT
+                        WHEN TRIM(NEW_SITID) = TRIM(LCDMSIFSITEIDENTIFI2.CNTLDAT)
+                                        THEN intermdtR.CNTLDAT
+                ELSE intermdt.CNTLDAT END AS ABD_INTRNL_STEMID
+
+        FROM MAINTEMPTABLE1 T1
+                      LEFT JOIN TEMPTABLE1 T6
+        ON      T1.PDCTID = T6.PDCTID
+                      LEFT  JOIN INS_ABD_SIF_PDCT_ACBD T2
+        ON      T6.RPT_PDCTUCT_GROUP  = T2.LOCAL_PDCTUCT_CODE
+                      INNER JOIN MAINTABLE3 T3
+        ON      T1.PDCTID = T3.PDCTID
+                      LEFT JOIN TEMPTABLE2 T4
+        ON      T1.PDCTID = T4.PDCTID
+                      INNER  JOIN TEMPTABLE3 T5
+        ON      T1.PDCTID = T5.PDCTID
+                      INNER JOIN MAINTABLE4 REPMONTH
+        ON      REPMONTH.CONTROL_KEY = 'ABDMONTH'
+                      INNER JOIN MAINTABLE4 DEFBANKTRADE
+        ON      DEFBANKTRADE.CONTROL_KEY = 'DEFBANKTRADEIND'
+                      INNER JOIN MAINTABLE4 GRP_IPTYPE
+        ON      GRP_IPTYPE.CONTROL_KEY = 'GRP_IPTYPE'
+                      INNER JOIN MAINTABLE4 LCDMSIFESRSITECODE
+        ON      LCDMSIFESRSITECODE.CONTROL_KEY = 'LCDMSIFESRSITECODE'
+                      INNER JOIN MAINTABLE4 LCDMSIFSITEIDENTIFIE
+        ON      LCDMSIFSITEIDENTIFIE.CONTROL_KEY = 'LCDMSIFSITEIDENTIFIE'
+                      INNER JOIN MAINTABLE4 UKREGULATOR
+        ON      UKREGULATOR.CONTROL_KEY = 'UKREGULATOR'
+                      INNER JOIN MAINTABLE4 PFS0
+        ON      PFS0.CONTROL_KEY = 'CUSTGROUP_PFS0'
+                      INNER JOIN MAINTABLE4 PFS1
+        ON      PFS1.CONTROL_KEY = 'CUSTGROUP_PFS1'
+                      INNER JOIN MAINTABLE4 PFS2
+        ON      PFS2.CONTROL_KEY = 'CUSTGROUP_PFS2'
+                      INNER JOIN MAINTABLE4 COM0
+        ON      COM0.CONTROL_KEY = 'CUSTGROUP_COM0'
+                      INNER JOIN MAINTABLE4 COM1
+        ON      COM1.CONTROL_KEY = 'CUSTGROUP_COM1'
+                      INNER JOIN MAINTABLE4 COM2
+        ON      COM2.CONTROL_KEY = 'CUSTGROUP_COM2'
+                      INNER JOIN MAINTABLE4 CIBM0
+        ON      CIBM0.CONTROL_KEY = 'CUSTGROUP_CIBM0'
+                      INNER JOIN MAINTABLE4 CIBM1
+        ON      CIBM1.CONTROL_KEY = 'CUSTGROUP_CIBM1'
+                      INNER JOIN MAINTABLE4 CIBM2
+        ON      CIBM2.CONTROL_KEY = 'CUSTGROUP_CIBM2'
+                      INNER JOIN MAINTABLE4 GPB0
+        ON      GPB0.CONTROL_KEY = 'CUSTGROUP_GPB0'
+                      INNER JOIN MAINTABLE4 GPB1
+        ON      GPB1.CONTROL_KEY = 'CUSTGROUP_GPB1'
+                      INNER JOIN MAINTABLE4 GPB2
+        ON      GPB2.CONTROL_KEY = 'CUSTGROUP_GPB2'
+                      INNER JOIN MAINTABLE4 OTH0
+        ON      OTH0.CONTROL_KEY = 'CUSTGROUP_OTH0'
+                      INNER JOIN MAINTABLE4 OTH1
+        ON      OTH1.CONTROL_KEY = 'CUSTGROUP_OTH1'
+                      INNER JOIN MAINTABLE4 OTH2
+        ON      OTH2.CONTROL_KEY = 'CUSTGROUP_OTH2'
+                      INNER JOIN MAINTABLE4 HBEUUKCCY
+        ON      HBEUUKCCY.CONTROL_KEY = 'HBEUUKCCY'
+                      INNER JOIN MAINTABLE4 LCDMSIFCREDMTGTTYPE
+        ON      LCDMSIFCREDMTGTTYPE.CONTROL_KEY = 'LCDMSIFCREDMTGTTYPE'
+                      INNER JOIN MAINTABLE4 LCDMSIFCREDMITCODE
+        ON      LCDMSIFCREDMITCODE.CONTROL_KEY = 'LCDMSIFCREDMITCODE'
+                      INNER JOIN MAINTABLE4 LCDMSIFPROVIDERTYPE
+        ON      LCDMSIFPROVIDERTYPE.CONTROL_KEY = 'LCDMSIFPROVIDERTYPE'
+                      INNER JOIN MAINTABLE4 LCDMSIFBASEL2APRCCOD
+        ON      LCDMSIFBASEL2APRCCOD.CONTROL_KEY = 'LCDMSIFBASEL2APRCCOD'
+                      INNER JOIN MAINTABLE4 LCDMSIFRGLTCLTRLTYPE
+        ON      LCDMSIFRGLTCLTRLTYPE.CONTROL_KEY = 'LCDMSIFRGLTCLTRLTYPE'
+                      INNER JOIN MAINTABLE4 ARRANGEMENTTYPE
+        ON      ARRANGEMENTTYPE.CONTROL_KEY = 'ARRANGEMENTTYPE'
+                      INNER JOIN MAINTABLE4 RELATIONSHIPTYPE
+        ON      RELATIONSHIPTYPE.CONTROL_KEY = 'RELATIONSHIPTYPE'
+                     INNER  JOIN MAINTABLE4 RAWSCALING
+        ON      RAWSCALING.CONTROL_KEY='RWA_SCALING_IND1'
+                                         INNER JOIN MAINTABLE4 SPRVOUTKEY
+        ON              SPRVOUTKEY.CONTROL_KEY = 'SPRVOUTKEY'
+                                        INNER JOIN MAINTABLE4 CPTLRATIO
+        ON              CPTLRATIO.CONTROL_KEY = 'CPTL_RATIO_PCT'
+                                        INNER JOIN MAINTABLE4 STDABASELPORTFCDE2
+        ON              STDABASELPORTFCDE2.CONTROL_KEY = 'STDABASELPORTFCDE2'
+                                        INNER JOIN MAINTABLE4 RISKWEIGHT_PCT_STDA2
+        ON              RISKWEIGHT_PCT_STDA2.CONTROL_KEY = 'RISKWEIGHT_PCT_STDA2'
+                                        INNER JOIN MAINTABLE4 RISKWEIGHT_PCT_STDA1
+        ON              RISKWEIGHT_PCT_STDA1.CONTROL_KEY = 'RISKWEIGHT_PCT_STDA1'
+                            LEFT JOIN INS_ABD_PDCTMTG PDCTMTG
+        ON      T1.PDCTID = PDCTMTG.PDCTID
+                    LEFT JOIN MAINTABLE5 CURRACC
+        ON      T1.PDCTID = CURRACC.PDCTID
+                                        LEFT JOIN INS_ABD_XRRSPDCTHIER XHIER
+                ON              T1.PDCTUCT_CODE = XHIER.PDCTUCT_CHILD
+                --# BEGIN - CL 02042015 - Added field PROP_CTRY_CDE
+              INNER JOIN MAINTABLE4 DEFAULTCOUNTRY
+        ON      DEFAULTCOUNTRY.CONTROL_KEY = 'DEFAULTCOUNTRY'
+                --# END - CL 02042015 - Added field PROP_CTRY_CDE
+                                --# BEGIN CR0003 BID2712 Retail SIF Consolidation
+                                LEFT JOIN TEMPTABLE9 GRCA
+                                ON T1.PDCTID=GRCA.PDCTID
+                --# END CR0003 BID2712 Retail SIF Consolidation
+                                --Below logic is Included as part of EnM changes to ABD
+                                LEFT JOIN MAINTABLE4 BASEENTHRFB
+                ON BASEENTHRFB.CONTROL_KEY ='BASEENTHRFB'
+                                LEFT JOIN MAINTABLE4 BASEENTMDBK
+                ON BASEENTMDBK.CONTROL_KEY ='BASEENTMDBK'
+                                LEFT JOIN MAINTABLE4 LCDMSIFSITEIDENTIFI2
+                ON      LCDMSIFSITEIDENTIFI2.CONTROL_KEY ='LCDMSIFSITEIDENTIFI2'
+                                -- Included Static table as part of Merge, De-merge changes on ABD
+                                                                LEFT JOIN MAINTABLE4 intermdtR
+                ON      intermdtR.CONTROL_KEY ='intermdtR'
+                                                                LEFT JOIN MAINTABLE4 intermdt
+                ON      intermdt.CONTROL_KEY ='intermdt'
+
+
+
+        WHERE T1.GCDM_EXTRACT_MKR = 'R'
+        AND     T1.SSSYS IN ('RPS','WHL')
+        AND CustomerITentifier <> 'SIF_DEF_CUST_UNKNSME'
+
+        GROUP BY
+         1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,27,28,29,30,32,33,37,38,
+         42,43,44,45 ,49,50,51,52,53,54,55,56,65,66,
+         72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91 ,93,94,95,96,97,98,99,100,104,105,106,107,108,109,110,111
+         ,112 --112 Included to be able to perform the logic in the fields 57,58,59,60,61,62,63,70,71
+         ,113 -- Field included to be able to load the LGD_MODEL for SIF V3 project.
+                 ,114,116,117, -- Fields included as part of the FDSF project
+                 119,120,      --Field included as part of the RPM project
+                 121,122,       --Fields included as part of the RWA by Models
+                 123,           -- CL 02042015 - Added field PROP_CTRY_CDE
+                 124,            -- BAU CR201515 - PDCTUCT_TYPE added to be able to refer the summed up fields in the query
+                                 125,126        -- As part of EnM changes to ABD
+                                                                 ,127 -- Included Group by clause for ABD_INTRNL_STEMID as part of Merge, De-merge changes on ABD
+        )
+                                          AS T1
+)
+WITH    DATA  UNIQUE PRIMARY INDEX(ACCOUNT_DEALITENTIFIER_NEW)
+        ON      COMMIT PRESERVE ROWS;
+
+
+
+
+--Perform the load into the SIF PDCTuct table rady for the extract.
+--Added new fields by Amzed as part of BID1165.
+--A new SIF field was mapped to the MAINTABLE13 table , field name :ABD_intrnl_STEMID.
+-- A new SIF field was mapped to the MAINTABLE13 table, field LGD_MODEL for SIF v3 Project.
+INSERT INTO MAINTABLE13
+(            PDCTID
+             , ABD_intrnl_STEMID
+             , rep_month
+             , RECTYP
+             , SITID
+             , esr_SITCE
+             , group_STEMID
+             , SSSYS
+             , orgn_unitIT
+             , customerIT
+             , customerIT_type
+             , PDCTuct_code
+             , PDCTuct_group
+             , basel_2_aprc_cod
+             , bank_trade_ind
+             , securitised_ind
+             , customer_group
+             , probability_default_pct
+             , PDCTuct_maturity_date
+             , bal_mthend
+             , bal_mthend_gl_key
+             , bal_mthend_grca_key
+             , bis_2_asset_type
+             , exposure_subtype
+             , exposure_type
+             , PAST_DUE_IND
+             , regulator_PDCT_type
+             , regulator_code
+             , residual_maturity
+             , wt_avg_lgd_factor_loc_rep_ccy
+             , wt_avg_crd_conv_loc_rep_ccy
+             , cr_mit_adj_lgd_loc_rep_ccy
+             , loss_given_default
+             , cr_mit_adj_ead_loc_rep_ccy
+             , cr_mit_adj_rwa_loc_rep_ccy
+             , gross_exposure_default
+             , expected_loss
+             , intercompany_rwa_loc_rep_ccy
+             , curr_ltv_pct
+             , cust_subgrp_lvl1
+             , cust_subgrp_lvl2
+             , mtur_eff_day_cnt
+             , aggregated_rec_cnt
+             ,EOP_BAL_CCY_CDE
+             , EOP_BAL_AMT
+             , ACT_CCY_CDE
+             , EAD_GL_KEY
+             , EAD_GRCA_KEY
+             , EXPCT_LGD_AMT
+             ,DRW_CRED_MTGT_ADJ_EAD_AMT
+             ,UNDRW_CRED_MTGT_ADJ_EAD_AMT
+             , DRW_CRED_MTGT_ADJ_RWA_AMT
+             , UDRW_CRED_MTGT_ADJ_RWA_AMT
+             , ORIG_EXPSR_PRE_CV_FCTR_AMT
+             , DRW_ORIG_EXPS_PRE_CV_FCTR_AMT
+             , UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT
+             , BSL_NET_EAD_PRE_CCF_AMT
+             , BSL_DRW_NET_EAD_PRE_CCF_AMT
+             , BSL_UDRW_NET_EAD_PRE_CCF_AMT
+             , ORI_EXPS_PRE_CCF_PST_SPRV_AMT
+             , DRW_ORI_EXPS_PRE_CCF_SPRV_AMT
+             , UDRW_ORI_EXPS_PRE_CCF_SPRV_AMT
+             , DRW_EXPCT_LOS_AMT
+             , UDRW_EXPCT_LOS_AMT
+             , GROS_RISK_WGHT_AMT
+             , DELINQUENCY_BAND
+             , LGD_MODEL
+                         , EAD_MODEL
+                         , PD_MODEL
+                         , PROP_CTRY_CDE  --#  CL 02042015 - Added field PROP_CTRY_CDE
+             --,SPRV_OUT_LOC_REP_CCY_AMT
+           --  ,SPRV_OUT_GL_KEY
+            -- ,SPRV_OUT_GRCA_KEY
+            -- ,SPRV_LOC_REP_CCY_AMT
+            --jhh ,DEFAULT_IND
+            -- ,CR_MIT_ADJ_CAP_REQ_LOC_REP_CCY
+           --  ,CR_MIT_ADJ_RISK_WGHT_AMT
+                        --Below two fields are Included as part of EnM changes to ABD
+                        , NEW_SITID
+                        , NEW_ORGN_UNITIT
+
+
+)
+--# New field was mapped ABD_intrnl_STEMID, value is from intermdt.CNTLDAT.
+SELECT       account_dealITentifier_new
+             -- Included ABD_INTRNL_STEMID as part of Merge, De-merge changes on ABD
+                         , TEMPTABLE4.ABD_INTRNL_STEMID
+                         --, intermdt.CNTLDAT
+             , repmonth.CNTLDAT
+             , RECTYP
+             , SITIDentifier
+             , esr_SITCE
+             , group_STEMIDentifier
+             , loc_SSSYSIT
+             , organisation_unitIT
+             , customerITentifier
+             , customerITentifier_type
+             , loc_PDCTuct_type_code
+             , group_PDCTuct_type_code
+             , basel_2_approach
+             , banking_trading_indicator
+             , securitised_indicator
+             , customer_group
+             , probability_of_def
+             , PDCTuctmaturitydate
+             , endofprdballocrepcurr
+             , endofprdballocreckey
+             , endofprdbalgroupreckey
+             , bis2assettype
+             , exposure_subtype
+             , exp_type
+             ,Past_Due_Indicator
+             , regulatory_PDCTuct_type
+             , regulator
+             , residual_maturity
+             , wgtavglgdfactorlocrepcurr
+             , wgtavgcrdconvfactorlocrepcurr
+             , crdmtgadjlgdlocrepcurr
+             , loss_given_def
+             , credmitadjexpdeflocrepcurr
+             , credmitadjrskwgtasslocrepcurr
+             , grossexpdeflocrepcurr
+             , expectedlosslocrepcurr
+             , intercpyriskwgtassetlocrepcur
+             , curr_ltv_pct
+             , customer_subgrp1
+             , customer_subgrp2
+            , mtur_eff_day_cnt
+             , preaggPDCTuctcount
+                         -- new sif PDCTuct fields follow
+             ,EOP_BAL_CCY_CODE
+             , EOP_BAL_AMT
+             , ACT_CCY_CDE
+             , EAD_GL_KEY
+             , EAD_GRCA_KEY
+             , EXPCT_LGD_AMT
+             ,DRW_CRED_MTGT_ADJ_EAD_AMT
+             ,UNDRW_CRED_MTGT_ADJ_EAD_AMT
+             , DRW_CRED_MTGT_ADJ_RWA_AMT
+             , UDRW_CRED_MTGT_ADJ_RWA_AMT
+             , ORIG_EXPSR_PRE_CV_FCTR_AMT
+             , DRW_ORIG_EXPS_PRE_CV_FCTR_AMT
+             , UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT
+             , BSL_NET_EAD_PRE_CCF_AMT
+             , BSL_DRW_NET_EAD_PRE_CCF_AMT
+             , BSL_UDRW_NET_EAD_PRE_CCF_AMT
+             , ORI_EXPS_PRE_CCF_PST_SPRV_AMT
+             , DRW_ORI_EXPS_PRE_CCF_SPRV_AMT
+             , UDRW_ORI_EXPS_PRE_CCF_SPRV_AMT
+             , DRW_EXPCT_LOS_AMT
+             , UDRW_EXPCT_LOS_AMT
+             , GROS_RISK_WGHT_AMT
+             ,DELINQUENCY_BAND
+                         , LGD_MODEL
+                         , EAD_MODEL
+                         , PD_MODEL
+                         , PROP_CTRY_CDE  --#  CL 02042015 - Added field PROP_CTRY_CDE
+
+        --     ,SPRV_OUT_LOC_REP_CCY_AMT
+         --    ,SPRV_OUT_GL_KEY
+          ---   ,SPRV_OUT_GRCA_KEY
+           --  ,SPRV_LOC_REP_CCY_AMT
+         --    ,DEFAULT_INDICATOR
+         --    ,CredMitAdjCapitalReqLocRepCurr
+         --    ,Risk_Weight
+                 --Below two fields are Included as part of EnM changes to ABD
+                        , NEW_SITID
+                        , NEW_ORGN_UNITIT
+
+FROM         TEMPTABLE4
+INNER JOIN   MAINTABLE4 repmonth
+             ON repmonth.control_key = 'ABDMONTH'
+--INNER JOIN   MAINTABLE4 intermdt on intermdt.control_key = 'intermdt'
+WHERE        account_dealITentifier_new IS NOT NULL ;
+
+
+-- This section was removed from the ABD_SIF_rvrse_cons
+-- ABD_SIF_rvrse_cons  was demised
+-- Logic changed to load the old and the new PDCTID consolidated
+--
+CREATE VOLATILE TABLE TEMPTABLE6 AS(
+                SELECT
+                REPMONTH.CNTLDAT AS REP_MONTH,
+                T1.PDCTID,
+                 CASE
+                                WHEN COALESCE(T6.GL_BAL , T1.ACT_LED_BAL_LOC) <= 0 THEN 'C'
+                                ELSE 'D'
+                        END AS EndofPrdBalLocRepCurr_Sign,
+
+
+                TRIM(SUBSTR(T1.SSSYS,1,1)) ||
+                substr(T3.ASSET_CLASS,1,2) ||
+                coalesce(TRIM(substr(T6.RPT_PDCTUCT_GROUP,1,5)), 'XXXXX') ||
+                coalesce(TRIM(T1.SECURITISED_IND), 'N') ||
+                coalesce(TRIM(CUSTOMER_GROUP),'XXX') ||
+                substr(coalesce(T4.PDBAND,'000.000'),1,3) ||
+                substr(coalesce(T4.PDBAND,'000.000'),5,3) ||
+                COALESCE(substr(T5.PDCTMatDate,1,2),99) ||
+                COALESCE(substr(T5.PDCTMatDate,4,2),99) ||
+                COALESCE(substr(T5.PDCTMatDate,7,2),99) ||
+                COALESCE(EndofPrdBalLocRepCurr_Sign,'X') ||
+                coalesce(trim(T5.ResMat),'99-99-99') ||
+                coalesce(TRIM(T3.DEFAULT_IND),'X')  ||
+                coalesce(TRIM(T3.DELINQUENCY_BAND),'XX') ||
+                                COALESCE(TRIM(CUSTOMER_SUBGRP1),' ')||
+                COALESCE(TRIM(T3.ACCT_PORTF_CDE),'XX') ||
+                COALESCE(Trim(CASE WHEN T1.BASEL_2_APRC_COD <> 'STDA' THEN T1.LGD_MODEL ELSE  ' ' END),'XX')||
+                COALESCE(Trim(CASE WHEN T1.BASEL_2_APRC_COD <> 'STDA' THEN T1.EAD_MODEL ELSE  ' ' END),'XX')||
+                COALESCE(Trim(CASE WHEN T1.BASEL_2_APRC_COD <> 'STDA' THEN T1.PD_MODEL ELSE  ' ' END),'XX')||
+              TRIM(T1.PDCTUCT_TYPE)||COALESCE(TRIM(GRCA.GRCA_CODE),'XX')||
+                          COALESCE(CASE WHEN TRIM(T1.NEW_BASE_ENT) = TRIM(BASEENTHRFB.CNTLDAT) THEN LCDMSIFSITEIDENTIFI2.CNTLDAT
+                                        WHEN TRIM(T1.NEW_BASE_ENT) = TRIM(BASEENTMDBK.CNTLDAT) THEN LCDMSIFSITEIDENTIFIE.CNTLDAT
+                                        ELSE LCDMSIFSITEIDENTIFI2.CNTLDAT END,'XX')||COALESCE(TRIM(T1.LEVEL2_HIER),'XX')  -- Added GRCA_CODE as part of CR0003 BID2712 Retail SIF Consolidation
+                AS CONSOLIDATED_ITEMS,
+                '                                        ' AS RETAIL_SIF_PDCTID,
+
+        CASE
+                WHEN T3.ASSET_CLASS = 'QRRE' THEN  'SIF_DEF_CUST_QRRERet'
+                WHEN T3.ASSET_CLASS = 'OTHR' THEN  'SIF_DEF_CUST_OTHRRet'
+                WHEN T3.ASSET_CLASS = 'RSMG' THEN  'SIF_DEF_CUST_RSMGRet'
+                WHEN T3.ASSET_CLASS = 'UNKN' THEN  'SIF_DEF_CUST_UNKNSME'
+                WHEN T3.ASSET_CLASS = 'SMEO' THEN  'SIF_DEF_CUST_SMEOTHR'
+                ELSE 'SIF_DEF_CUST_UNKNSME'
+        END as CustomerITentifier,
+
+                'RETAIL' || '#'||  T3.ASSET_CLASS AS EXPOSURE_TYPE
+
+                FROM MAINTEMPTABLE1 T1
+                LEFT JOIN TEMPTABLE1 T6 on T1.PDCTID = T6.PDCTID
+                LEFT JOIN INS_ABD_SIF_PDCT_ACBD T2 ON T6.RPT_PDCTUCT_GROUP  = T2.LOCAL_PDCTUCT_CODE
+                INNER JOIN MAINTABLE3 T3 ON T1.PDCTID = T3.PDCTID
+                LEFT JOIN TEMPTABLE2 T4 ON T1.PDCTID = T4.PDCTID
+                INNER JOIN TEMPTABLE3 T5 ON T1.PDCTID = T5.PDCTID
+                INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+                INNER JOIN   MAINTABLE4 intermdt on intermdt.control_key = 'intermdt'
+                                INNER JOIN MAINTABLE4 PFS0 ON      PFS0.CONTROL_KEY = 'CUSTGROUP_PFS0'
+                                INNER JOIN MAINTABLE4 PFS1 ON      PFS1.CONTROL_KEY = 'CUSTGROUP_PFS1'
+                                INNER JOIN MAINTABLE4 COM0 ON      COM0.CONTROL_KEY = 'CUSTGROUP_COM0'
+                                INNER JOIN MAINTABLE4 COM1 ON      COM1.CONTROL_KEY = 'CUSTGROUP_COM1'
+                                INNER JOIN MAINTABLE4 CIBM0 ON      CIBM0.CONTROL_KEY = 'CUSTGROUP_CIBM0'
+                                INNER JOIN MAINTABLE4 CIBM1 ON      CIBM1.CONTROL_KEY = 'CUSTGROUP_CIBM1'
+                                INNER JOIN MAINTABLE4 GPB0  ON      GPB0.CONTROL_KEY = 'CUSTGROUP_GPB0'
+                                INNER JOIN MAINTABLE4 GPB1  ON      GPB1.CONTROL_KEY = 'CUSTGROUP_GPB1'
+                                INNER JOIN MAINTABLE4 OTH0  ON      OTH0.CONTROL_KEY = 'CUSTGROUP_OTH0'
+                                INNER JOIN MAINTABLE4 OTH1  ON      OTH1.CONTROL_KEY = 'CUSTGROUP_OTH1'
+                LEFT JOIN INS_ABD_XRRSPDCTHIER XHIER   ON          T1.PDCTUCT_CODE = XHIER.PDCTUCT_CHILD
+                                LEFT JOIN TEMPTABLE9 GRCA            ON T1.PDCTID=GRCA.PDCTID  -- Added this join condtion as part of CR0003 BID2712 Retail SIF Consolidation
+                                                                --Added as part of EnM changes to ABD
+                                                                LEFT JOIN MAINTABLE4 BASEENTHRFB
+                                                                        ON BASEENTHRFB.CONTROL_KEY ='BASEENTHRFB'
+                                                                LEFT JOIN MAINTABLE4 BASEENTMDBK
+                                                                        ON BASEENTMDBK.CONTROL_KEY ='BASEENTMDBK'
+                                                                LEFT JOIN MAINTABLE4 LCDMSIFSITEIDENTIFI2
+                                                                        ON      LCDMSIFSITEIDENTIFI2.CONTROL_KEY ='LCDMSIFSITEIDENTIFI2'
+                                                                INNER JOIN MAINTABLE4 LCDMSIFSITEIDENTIFIE
+                                                                        ON      LCDMSIFSITEIDENTIFIE.CONTROL_KEY = 'LCDMSIFSITEIDENTIFIE'
+
+                WHERE T1.GCDM_EXTRACT_MKR = 'R' AND T1.SSSYS IN ('RPS','WHL')
+                AND CustomerITentifier <> 'SIF_DEF_CUST_UNKNSME'
+
+) WITH DATA UNIQUE PRIMARY INDEX(PDCTID) ON COMMIT PRESERVE ROWS;
+
+---Update statement
+---
+---
+UPDATE TEMPTABLE6 FROM
+(
+SELECT
+ACCOUNT_DEALITENTIFIER_NEW, ACCOUNT_DEALITENTIFIER_OLD FROM TEMPTABLE4
+) T (T1, T2)
+SET RETAIL_SIF_PDCTID = T1 WHERE CONSOLIDATED_ITEMS=T2;
+
+---- Comment
+INSERT INTO MAINTABLE11
+SELECT
+        REP_MONTH,
+        PDCTID,
+        RETAIL_SIF_PDCTID,
+        EXPOSURE_TYPE,
+        CONSOLIDATED_ITEMS
+        FROM TEMPTABLE6;
+
+
+--# Comment line
+--Comment line2
+-- Comment line3
+INSERT INTO MAINTABLE10
+(
+MITIGANTIT,
+ABD_INTRNL_STEMID,
+REP_MONTH,
+RECTYP,
+SITID,
+ESR_SITCE,
+GROUP_STEMID,
+SSSYS,
+BENEFICIARYIT,
+BENEFICIARYIT_TYPE,
+PROVIDER_TYPE,
+PROVIDERIT,
+PROVIDERIT_TYPE,
+CRED_MTGT_CDE,
+NEW_SITID
+
+)
+--# comment
+SELECT
+F_MITIGANTIT,
+-- Included ABD_INTRNL_STEMID as part of Merge, De-merge changes on ABD
+TEMPTABLE4.ABD_INTRNL_STEMID,
+--intermdt.CNTLDAT,
+REPMONTH.CNTLDAT,
+F_RECTYP,
+F_SITID,
+F_ESR_SITCE,
+F_GROUP_STEMID,
+F_SSSYS,
+F_BENEFICIARYIT,
+F_BENEFICIARYIT_TYPE,
+F_PROVIDER_TYPE,
+F_PROVIDERIT,
+F_PROVIDERIT_TYPE,
+F_CRED_MTGT_CDE,
+NEW_SITID
+FROM TEMPTABLE4
+INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+--INNER JOIN MAINTABLE4 intermdt ON intermdt.CONTROL_KEY = 'intermdt'
+WHERE F_MITIGANTIT IS NOT NULL;
+
+
+--# Perform the load into the SIF MITIGANT AUDIT table
+--A new SIF field was mapped to the MAINTABLE13 table , field name :ABD_intrnl_STEMID.
+--Some new SIF fields were mapped to the MAINTABLE13 table , field name :DRW_ORIG_EXPS_PRE_CV_FCTR_AMT and UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT .
+-- Included NEW_SITID as part of Merge, De-merge changes on ABD
+INSERT INTO MAINTABLE9
+(
+MITIGANTIT,
+ABD_INTRNL_STEMID,
+PDCTID,
+REP_MONTH,
+RECTYP,
+SITID,
+ESR_SITCE,
+REGULATOR_CODE,
+BASEL_2_APRC_COD,
+MITIGANT_VAL_AMT,
+RGLT_CLTRL_TYPE,
+DRW_ORI_EXPS_PRE_CCF_SPRV_AMT,
+UDRW_ORI_EXPS_PRE_CCF_SPRV_AMT,
+DRW_CRED_MTGT_ADJ_RWA_AMT,
+UDRW_CRED_MTGT_ADJ_RWA_AMT,
+DRW_EXPCT_LOS_AMT,
+UDRW_EXPCT_LOS_AMT,
+CRED_MTGT_TYPE,
+MTGT_GROS_AMT,
+DRW_MTGT_GROS_AMT,
+UDRW_MTGT_GROS_AMT,
+DRW_ORIG_EXPS_PRE_CV_FCTR_AMT ,
+UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT,
+NEW_SITID
+)
+--# New field was mapped, named ABD_intrnl_STEMID. The value is from intermdt.CNTLDAT.
+SELECT
+G_MITIGANTIT,
+-- Included ABD_INTRNL_STEMID as part of Merge, De-merge changes on ABD
+TEMPTABLE4.ABD_INTRNL_STEMID,
+--intermdt.CNTLDAT,
+G_PDCTID,
+REPMONTH.CNTLDAT,
+G_RECTYP,
+G_SITID,
+G_ESR_SITCE,
+G_REGULATOR_CODE,
+G_BASEL_2_APRC_COD,
+G_MITIGANT_VAL_AMT,
+G_RGLT_CLTRL_TYPE,
+G_DRW_ORI_EXPS_PRE_CCF_SPRV_AM,
+G_UDRW_ORI_EXPS_PRE_CCF_SPRV_A,
+G_DRW_CRED_MTGT_ADJ_RWA_AMT,
+G_UDRW_CRED_MTGT_ADJ_RWA_AMT,
+G_DRW_EXPCT_LOS_AMT,
+G_UDRW_EXPCT_LOS_AMT,
+G_CRED_MTGT_TYPE,
+G_MTGT_GROS_AMT,
+G_DRW_MTGT_GROS_AMT,
+G_UDRW_MTGT_GROS_AMT,
+DRW_ORIG_EXPS_PRE_CV_FCTR_AMT ,
+UDRW_ORIG_EXPS_PRE_CV_FCTR_AMT,
+NEW_SITID
+FROM TEMPTABLE4
+INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+--INNER JOIN MAINTABLE4 intermdt ON intermdt.CONTROL_KEY = 'intermdt'
+WHERE G_MITIGANTIT IS NOT NULL;
+
+--Comment
+INSERT INTO MAINTABLE8
+(MITIGANTIT,ABD_INTRNL_STEMID, REP_MONTH, PDCTID, RECTYP, SITID, ESR_SITCE, ARRG_TYPE, RELN_TYPE, NEW_SITID)
+--# comment section 
+SELECT
+H_MITIGANTIT,
+-- comment line
+TEMPTABLE4.ABD_INTRNL_STEMID,
+--intermdt.CNTLDAT,
+REPMONTH.CNTLDAT,
+H_PDCTID,
+H_RECTYP,
+H_SITID,
+H_ESR_SITCE,
+H_ARRG_TYPE,
+H_RELN_TYPE,
+-- Comment line 
+NEW_SITID
+FROM TEMPTABLE4
+INNER JOIN MAINTABLE4 REPMONTH ON REPMONTH.CONTROL_KEY = 'ABDMONTH'
+--INNER JOIN MAINTABLE4 intermdt ON intermdt.CONTROL_KEY = 'intermdt'
+WHERE H_MITIGANTIT IS NOT NULL;

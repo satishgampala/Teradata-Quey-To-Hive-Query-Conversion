@@ -1,0 +1,54 @@
+#####################
+#LOOKUP TABLE (HIVE)#
+#####################
+
+--VOLATILE= TEMPORARY 
+
+--NOTE: Hive automatically deletes all temporary tables at the end of the Hive session in which they are created. 
+--The data in these tables is stored in the user's scratch directory rather than in the Hive warehouse directory.
+
+WITH DATA UNIQUE PRIMARY INDEX() ON COMMIT PRESERVE ROWS =
+LEFT JOIN= LEFT OUTER JOIN
+INNER JOIN= JOIN
+SEL= SELECT
+AS= AS
+TABLE= TABLE
+COALESCE= COALESCE
+TRIM= TRIM
+CASE= CASE
+WHEN= WHEN 
+ELSE= ELSE 
+THEN= THEN 
+IS= IS 
+NOT= NOT
+NULL= NULL
+END= END
+IN= IN 
+SUBSTR= SUBSTR
+CAST= CAST
+CREATE VOLATILE TABLE TBL AS= DROP TABLE TBL; CREATE TABLE TBL AS
+ADD_MONTHS= ADD_MONTHS
+FROM= FROM 
+ON= ON
+AND= AND
+UPDATE= UPDATE 
+WHERE= WHERE
+SET= SET 
+DATE FORMAT= DATE
+UNION ALL= UNION ALL
+RANK() OVER= RANK() OVER
+CHAR= CHAR
+DECIMAL= DECIMAL
+||= ||
+<>= <>
+INSERT= INSERT 
+
+
+
+
+
+
+
+
+
+
