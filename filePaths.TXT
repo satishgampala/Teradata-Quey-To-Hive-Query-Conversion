@@ -1,1 +1,1 @@
-C:\TdToHiveMigration\UCD_COMPLEX_SCRIPT_SAMPLE.TXT
+C:\TdToHiveMigration\TeraDataQueryFile.TXT.TXT
